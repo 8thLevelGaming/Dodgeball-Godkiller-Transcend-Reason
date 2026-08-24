@@ -112,7 +112,7 @@ player_character = player.Player()
 # Immediately after we create the player, we check if easy mode
 # was selected, and if so we increase the player's level,
 # plus a couple of stats and their starting money.
-if GameState.easy_mode is True:
+if game_state.easy_mode is True:
     player_character.level = 15
     player_character.strength = 12
     player_character.precision = 12
