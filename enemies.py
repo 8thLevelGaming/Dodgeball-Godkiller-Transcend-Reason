@@ -1,3 +1,8 @@
+"""This module contains the enemy lists and the functions that instantiate them."""
+
+import random
+import utils
+
 # This is where the list of enemy classes starts.
 # Note that we are giving them both minimum and maximum damage values.
 # This is so we can use them as the randint range later.
@@ -272,7 +277,7 @@ def create_random_enemy():
         new_enemy = Weakling()
     elif enemy_roll <= 100:
         new_enemy = Elite()
-    slow_print("\nA new adversary approaches!")
+    utils.slow_print("\nA new adversary approaches!")
     # We return the result of the roll.
     return new_enemy
 
@@ -280,7 +285,7 @@ def create_random_enemy():
 # late-game enemies once the next_god counter puts the player out of
 # the early game. This other function will roll different ranges
 # depending on the stage of the game.
-def create_greater_enemy():
+def create_greater_enemy(fight_god, game_midpoint, starting_late_game):
     if fight_god > game_midpoint:
         enemy_roll = random.randint(0, 100)
     elif fight_god > starting_late_game:
@@ -302,7 +307,7 @@ def create_greater_enemy():
         new_enemy = Dragon()
     elif enemy_roll <= 150:
         new_enemy = Kaiju()
-    slow_print("\nA new adversary approaches!")
+    utils.slow_print("\nA new adversary approaches!")
     return new_enemy
 
 # These functions just make overlord enemies and the final boss.
@@ -321,5 +326,5 @@ def create_god():
     return dodgeball_god
     
 # Simple function that displays enemy type and HP.
-def enemy_stats_display():
+def enemy_stats_display(current_enemy):
     print(f"\nCurrent Enemy: {current_enemy.type} | Enemy HP: {current_enemy.hp}")

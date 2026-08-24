@@ -1,5 +1,7 @@
 """This module holds miscellaneous utilities and helper functions."""
 
+import time
+
 # Function that draws bars for a status display.
 # It takes the current HP/stamina/exp value as well as the maximum values for
 # those attributes (100 for exp since you always level up at 100).

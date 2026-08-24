@@ -1,4 +1,8 @@
+"""This module holds the player class, the player's status displays, and a few functions used by the player,
+such as the leveling function. Note that player_character is the generated player object."""
+
 import utils
+import items
 
 # Player Core Stats. Be warned that hp and stamina are methods rather
 # than integers, so they need parentheses when called in the future.
@@ -59,7 +63,7 @@ def full_stats_display(player_character):
         for effect_name, potency in player_character.effects.items():
             # We then check if the effect listed is in the list of effects that
             # are percentage-based. If so we add a % at the end.
-            if effect_name in percentage_effects:
+            if effect_name in items.percentage_effects:
                 print(f"{effect_name}: {potency}%")
             else:
                 print(f"{effect_name}: {potency}")
@@ -83,7 +87,7 @@ attack_multipliers = {
 # The way we're doing it like this rather than hardcoding them where they
 # are used is to make it so they can be neatly modified in one location
 # if we ever decide to modify or expand on them.
-def stamina_costs(attack_key): 
+def stamina_costs(player_character, attack_key): 
     base_costs = {
     "1": 8,
     "2": 12,
@@ -95,21 +99,21 @@ def stamina_costs(attack_key):
     # so that the Graceful item effect can give the player a stamina discount
     # if they have that.
     base_cost = base_costs[attack_key]
-    return adjusted_stamina_cost(base_cost)
+    return adjusted_stamina_cost(player_character, base_cost)
 
 # This other function checks to see if the player actually has enough
 # stamina to perform an action and it performs the action and deducts
 # the cost. For this function we are going to be using another
 # function as one of its arguments (effect) through the use of lambda.
 # details on that further below.
-def stamina_checker(player, cost, flavor_text, effect):
+def stamina_checker(player_character, cost, flavor_text, effect):
     # The checker first measures if the player has enough stamina,
     # then prints flavor text and performs an effect.
     # Then it deducts the stamina cost.
-    if player.stamina >= cost:
+    if player_character.stamina >= cost:
         print(flavor_text)
         effect()
-        player.stamina = player.stamina - cost
+        player_character.stamina = player_character.stamina - cost
         return True
     else:
         print("Not enough stamina!")
@@ -121,8 +125,8 @@ def stamina_checker(player, cost, flavor_text, effect):
 # We use the .get() function to see if the player has the "graceful"
 # effect and default its value to 0, but if they do have it then it will
 # not be 0.
-def adjusted_stamina_cost(base_cost):
-    graceful_total = player.effects.get("graceful", 0)
+def adjusted_stamina_cost(player_character, base_cost):
+    graceful_total = player_character.effects.get("graceful", 0)
     adjusted_cost = base_cost - graceful_total
     return max(1, adjusted_cost)
 
@@ -131,15 +135,15 @@ def adjusted_stamina_cost(base_cost):
 # early but stronger later on.
 # The demon mode bonus is equal to half the player's level, starting at
 # +6 to all stats except endurance, and ending up around +50.
-def demon_bonus_result():
-    return player.level // 2
+def demon_bonus_result(player_character):
+    return player_character.level // 2
 
 # Function that is called when the player levels up.
 # They can choose one of their attributes to increase by 2.
 # It uses the same kind of options display logic as the previous
 # function but rather than executing effects the chosen option
 # instead increases a player stat.
-def level_up():
+def level_up(player_character):
     options = {
         "1": "Strength. Throw harder!",
         "2": "Precision. Hit more, crit more!",
@@ -152,13 +156,13 @@ def level_up():
         level_up_increase = input("Increase a score by 2!")
         if level_up_increase in options:
             if level_up_increase == "1":
-                player.strength = player.strength + 2
+                player_character.strength = player_character.strength + 2
             elif level_up_increase == "2":
-                player.precision = player.precision + 2
+                player_character.precision = player_character.precision + 2
             elif level_up_increase == "3":
-                player.agility = player.agility + 2
+                player_character.agility = player_character.agility + 2
             elif level_up_increase == "4":
-                player.endurance = player.endurance + 2
+                player_character.endurance = player_character.endurance + 2
             break
         else:
-            slow_print("Your options range between 1 and 4!")
+            utils.slow_print("Your options range between 1 and 4!")

@@ -1,3 +1,5 @@
+"""This module holds the item list and item functions."""
+
 # Item Pool Dictionary.
 # This dictionary stores values that are themselves dictionaries.
 # The simpler ones follow the format:
@@ -455,18 +457,18 @@ def item_price(item_name):
 
 # I have moved the application of item effects to the player into its own
 # function to keep the code DRY and neat.
-def apply_item_effects(item_name):
+def apply_item_effects(item_name, player_character):
     details = item_pool[item_name]
 
     # It collects the data from items in the pool and uses
     # setattr and getattr to update the player's stats by the correct amount.
     # These functions can be used to neatly update object attributes.
-    # In this case the object argument (player) is updated by the attribute
+    # In this case the object argument (player_character) is updated by the attribute
     # parameter (item_effect["stat"]) and the amount is obtained through
     # getattr to get the item's "amount".
     if "boosts" in details:
         for item_effect in details["boosts"]:
-            setattr(player, item_effect["stat"], getattr(player, item_effect["stat"]) + item_effect["amount"])
+            setattr(player_character, item_effect["stat"], getattr(player_character, item_effect["stat"]) + item_effect["amount"])
     # There is also a condition where if the item has special effects,
     # those will be added to the player's active effects and two effects of
     # the same type will stack their potency additively.
@@ -474,5 +476,5 @@ def apply_item_effects(item_name):
         effect_name = details["special"]["name"]
         effect_potency = details["special"]["potency"]
 
-        player.effects[effect_name] = player.effects.get(effect_name, 0) + effect_potency
-    player.owned_items.append(item_name)
+        player_character.effects[effect_name] = player_character.effects.get(effect_name, 0) + effect_potency
+    player_character.owned_items.append(item_name)

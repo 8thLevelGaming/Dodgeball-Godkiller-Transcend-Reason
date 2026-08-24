@@ -7,8 +7,6 @@
 # I used the LLMs more as a (kind of clueless) teacher than as a substitute on this.
 # Because I seek the knowledge that will let me make much more complex games in the future.
 
-import random
-import time
 import player
 import enemies
 import combat
@@ -152,7 +150,7 @@ while True:
         # before either the overlord or god fights.
         if next_shop <= 0:
             utils.slow_print("\nYou visit the Spice King Mapo Tofu Shop!")
-            shop()
+            shop.visit_shop(player_character)
             next_shop = 9
             continue
         elif fight_god <= 0:
@@ -169,7 +167,7 @@ while True:
             utils.slow_print(f"Prepare to face {current_enemy.type}!")
 
         elif next_overlord > 0 and fight_god <= early_game_over:
-            current_enemy = enemies.create_greater_enemy()
+            current_enemy = enemies.create_greater_enemy(fight_god, game_midpoint, starting_late_game)
             if current_enemy.type == "Catgirl":
                 print("Nyaaa~!")
             elif current_enemy.type == "Abomination":
@@ -188,15 +186,15 @@ while True:
         # The player's turn is set to on at the start of each new fight.
         # And the current enemy is locked in for a fight function use.
         player_turn = True
-        current_enemy = combat.fight(player, current_enemy)
-        if player.hp < 1:
+        current_enemy = combat.fight(player_character, current_enemy, player_turn, next_overlord, next_shop, fight_god, eye_of_omens_counter, demon_counter, god_charged, god_turn_counter)
+        if player_character.hp < 1:
             break
 
     # Game ends and displays the player's stats if god is defeated.
     if current_enemy == "GOD_DEFEATED":
         print("YOU WIN!")
         print("Your final attributes were:")
-        player.full_stats_display()
+        player.full_stats_display(player_character)
         break
 
     # If the player is defeated they can choose a difficulty and
@@ -220,7 +218,7 @@ while True:
             else:
                 print("Choose 1 or 2.")
                 
-        player_character = Player()
+        player_character = player.Player()
 
         if easy_mode is True:
             player_character.level = 15
