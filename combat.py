@@ -2,24 +2,23 @@
 fight() function."""
 
 import player
-import items
 import utils
 import enemies
 import random
 
 # Function to take player input when making decisions.
-def player_options(player_character):
+def player_options(combat_state):
     # The options variable is a dictionary keying numbers to the options
     # available in a fight.
     options = {
-        "1": f"Basic Shot ({player.stamina_costs('1')}). A simple throw.",
-        "2": f"Meteor Shot ({player.stamina_costs('2')}). Jump and throw from above!",
-        "3": f"Eye of Omens ({player.stamina_costs('3')}). Use your cursed eye to predict enemy movements!",
-        "4": f"Helios Dive ({player.stamina_costs('4')}). Unleash the power of the sun!",
+        "1": f"Basic Shot ({combat_state.player.stamina_costs('1')}). A simple throw.",
+        "2": f"Meteor Shot ({combat_state.player.stamina_costs('2')}). Jump and throw from above!",
+        "3": f"Eye of Omens ({combat_state.player.stamina_costs('3')}). Use your cursed eye to predict enemy movements!",
+        "4": f"Helios Dive ({combat_state.player.stamina_costs('4')}). Unleash the power of the sun!",
         "5": "Demonic Art ~ Transcend Reason (1 Soul). Have faith in your evil.",
         "6": "Rest. Catch your breath and recover extra stamina.",
-        "7": f"Eat sardines to recover your energy and maintain your physical form. You have {player_character.sardine_inventory}.",
-        "8": f"Use a spellcard ({player_character.spellcard_inventory} available). 1 round of invulnerability plus deal guaranteed damage.",
+        "7": f"Eat sardines to recover your energy and maintain your physical form. You have {combat_state.player.sardine_inventory}.",
+        "8": f"Use a spellcard ({combat_state.player.spellcard_inventory} available). 1 round of invulnerability plus deal guaranteed damage.",
         "9": "View your attributes."
         }
     # The dictionary is unpacked. The options are printed in full.
@@ -393,15 +392,15 @@ def fight(game_state, combat_state):
             # Each attack is keyed to a dictionary above that matches its stamina cost and
             # runs the attack roll through lambda.
             if player_move == "1":
-                if player.stamina_checker(combat_state.player, player.stamina_costs('1'), "You throw the dodgeball!", lambda: hit_calc("Standard", combat_state)):
+                if player.stamina_checker(combat_state.player, combat_state.player.stamina_costs('1'), "You throw the dodgeball!", lambda: hit_calc("Standard", combat_state)):
                     combat_state.player.player_turn = False
                     
             elif player_move == "2":
-                if player.stamina_checker(combat_state.player, player.stamina_costs('2'), "You jump and slam the dodgeball into the enemy!", lambda: hit_calc("Meteor", combat_state)):
+                if player.stamina_checker(combat_state.player, combat_state.player.stamina_costs('2'), "You jump and slam the dodgeball into the enemy!", lambda: hit_calc("Meteor", combat_state)):
                     combat_state.player.player_turn = False
                     
             elif player_move == "3":
-                if combat_state.player.stamina >= player.stamina_costs('3'):
+                if combat_state.player.stamina >= combat_state.player.stamina_costs('3'):
                     utils.slow_print("\nYour magical eye grants you precognition!")
                     base_duration = 3
                     time_control_bonus = combat_state.player.effects.get("time control", 0)
@@ -409,13 +408,13 @@ def fight(game_state, combat_state):
                     combat_state.player.eye_of_omens_counter = total_duration
                     if time_control_bonus > 0:
                         print("Your mastery over time extends the effect!")
-                    combat_state.player.stamina = combat_state.player.stamina - player.stamina_costs('3')
+                    combat_state.player.stamina = combat_state.player.stamina - combat_state.player.stamina_costs('3')
                     combat_state.player.player_turn = False
                 else:
                     print("Not enough stamina!")
                     
             elif player_move == "4":
-                if player.stamina_checker(combat_state.player, player.stamina_costs('4'), "You throw a ball imbued with the power and malevolence of the sun!", lambda: hit_calc("Helios", combat_state)):
+                if player.stamina_checker(combat_state.player, combat_state.player.stamina_costs('4'), "You throw a ball imbued with the power and malevolence of the sun!", lambda: hit_calc("Helios", combat_state)):
                     combat_state.player.player_turn = False
 
             # Moves 3 and 5 boost the player's stats temporarily instead, and move 5 is

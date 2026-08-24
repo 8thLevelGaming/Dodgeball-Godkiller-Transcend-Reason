@@ -50,6 +50,25 @@ class Player:
     def demon_bonus_result(player_character):
         return player_character.level // 2
 
+    # This function holds stamina costs so they can be more future-proofed.
+    # It now also adjusts the stamina if the player has any Graceful items.
+    # The way we're doing it like this rather than hardcoding them where they
+    # are used is to make it so they can be neatly modified in one location
+    # if we ever decide to modify or expand on them.
+    def stamina_costs(self, attack_key): 
+        base_costs = {
+        "1": 8,
+        "2": 12,
+        "3": 10,
+        "4": 24
+        }
+
+        # We make a base_cost variable and call the adjusted_stamina_cost function
+        # so that the Graceful item effect can give the player a stamina discount
+        # if they have that.
+        base_cost = base_costs[attack_key]
+        return adjusted_stamina_cost(self, base_cost)
+
 # This function is meant to display the player's level, exp, HP, and stamina.
 def stats_display(player_character):
     # We use the make_bar function above to display player values as bars.
@@ -93,24 +112,7 @@ attack_multipliers = {
     "Helios": 2.5
 }
 
-# This function holds stamina costs so they can be more future-proofed.
-# It now also adjusts the stamina if the player has any Graceful items.
-# The way we're doing it like this rather than hardcoding them where they
-# are used is to make it so they can be neatly modified in one location
-# if we ever decide to modify or expand on them.
-def stamina_costs(player_character, attack_key): 
-    base_costs = {
-    "1": 8,
-    "2": 12,
-    "3": 10,
-    "4": 24
-    }
 
-    # We make a base_cost variable and call the adjusted_stamina_cost function
-    # so that the Graceful item effect can give the player a stamina discount
-    # if they have that.
-    base_cost = base_costs[attack_key]
-    return adjusted_stamina_cost(player_character, base_cost)
 
 # This other function checks to see if the player actually has enough
 # stamina to perform an action and it performs the action and deducts
