@@ -14,7 +14,32 @@ import shop
 import utils
 
 start_game = 0
-easy_mode = False
+
+
+class GameState:
+    """This class keeps track of various progression counters and the current difficulty.
+    Current_enemy makes it so there is no initial enemy so the game rolls a random one.
+    The next_shop and next_overlord variables count down to the next shop or boss fight.
+    The total_battles variable is basically our counter for how long the game will be."""
+    def __init__(self):
+        self.easy_mode = False
+        self.next_shop = 9
+        self.next_overlord = 9
+        self.total_battles = 108
+        self.fight_god = self.total_battles
+        self.current_enemy = 0
+
+        # Game Stage variables record if the game is in its early, mid, or
+        # late stages based on how close the fight with god is.
+        # The game is 108 battles divided into 4 quarters of 27.
+        #Goes from city to dojos to the moon and finally the Dodgeball Dimension.
+        self.game_quarter = self.total_battles // 4
+        self.early_game_over = self.game_quarter * 3
+        self.game_midpoint = self.game_quarter * 2
+        self.starting_late_game = self.game_quarter
+
+# GameState variable is initialized.
+game_state = GameState()
 
 # Tutorial. Game starts only when the player presses 1.
 # I decided to not just start the game right away to give the player time
@@ -87,7 +112,7 @@ player_character = player.Player()
 # Immediately after we create the player, we check if easy mode
 # was selected, and if so we increase the player's level,
 # plus a couple of stats and their starting money.
-if easy_mode is True:
+if GameState.easy_mode is True:
     player_character.level = 15
     player_character.strength = 12
     player_character.precision = 12
@@ -98,112 +123,79 @@ if easy_mode is True:
     # to ensure the player still starts at full.
     player_character.hp = player_character.max_hp()
     player_character.stamina = player_character.max_stamina()
-
-# Some of these variables need to be reset when the player is defeated
-# and starts over. These are global variables used throughout the game.
-# current_enemy makes it so there is no initial enemy so the game rolls
-# a random one. next_shop and next_overlord count down to the next
-# shop or boss fight. total_battles is basically our counter for how
-# long the game will be. eye_of_omens_counter and demon_counter are
-# set to 0 so the player starts with buffs off.
-# The player's turn is set to True so they'll always go first.
-# Some variables for the final boss fight are also initialized here.
-current_enemy = 0
-next_shop = 9
-next_overlord = 9
-total_battles = 108
-fight_god = total_battles
-eye_of_omens_counter = 0
-demon_counter = 0
-player_turn = True
-god_charged = False
-god_turn_counter = 0
-
-# Game Stage variables record if the game is in its early, mid, or
-# late stages based on how close the fight with god is.
-# The game is 108 battles divided into 4 quarters of 27.
-#Goes from city to dojos to the moon and finally the Dodgeball Dimension.
-game_quarter = total_battles // 4
-early_game_over = game_quarter * 3
-game_midpoint = game_quarter * 2
-starting_late_game = game_quarter
         
 # This is the loop that actually runs the game. The outer loop checks that
 # the player is still alive and restarts the game if not.
 # It now displays what stage of the game the player is in.
 # The inner loop rolls random enemies, switching to an overlord enemy periodically.
 while True:
-    while current_enemy == 0:
+    while game_state.current_enemy == 0:
         # This if/elif branch tells the player in which quarter of the
         # game they are.
-        if fight_god > early_game_over:
+        if game_state.fight_god > game_state.early_game_over:
             print("You hunt your prey at local city gyms!")
-        elif fight_god > game_midpoint:
+        elif game_state.fight_god > game_state.game_midpoint:
             print("You visit ancient dodgeball dojos to meet stronger enemies.")
-        elif fight_god > starting_late_game:
+        elif game_state.fight_god > game_state.starting_late_game:
             print("You invade the Moon in the name of dodgeball mastery.")
-        elif fight_god <= starting_late_game:
+        elif game_state.fight_god <= game_state.starting_late_game:
             print("You seek the ultimate challenge in the Dodgeball Dimension!")
 
         # This triggers a shop visit if the next_shop counter hits 0.
-        # The placement at the top of the loop ensures it always happens
-        # before either the overlord or god fights.
-        if next_shop <= 0:
+        # The placement at the top of the loop ensures it always happens before either the overlord or god fights.
+        if game_state.next_shop <= 0:
             utils.slow_print("\nYou visit the Spice King Mapo Tofu Shop!")
             shop.visit_shop(player_character)
-            next_shop = 9
+            game_state.next_shop = 9
             continue
-        elif fight_god <= 0:
-            current_enemy = enemies.create_god()
+        elif game_state.fight_god <= 0:
+            game_state.current_enemy = enemies.create_god()
             print("-" * 40)
             utils.slow_print("The Dodgeball God has descended to stop your reign of terror!")
             utils.slow_print("'You believe you have mastered Dodgeball?! You are but a frog in a well gazing up at the sky!'")
         
-         # If there is no periodic or final fight scheduled, the
-        # game instead rolls a random enemy depending on
+        # If there is no periodic or final fight scheduled, the game instead rolls a random enemy depending on
         # which stage of the game the player is in.
-        elif next_overlord > 0 and fight_god > early_game_over:
-            current_enemy = enemies.create_random_enemy()
-            utils.slow_print(f"Prepare to face {current_enemy.type}!")
+        elif game_state.next_overlord > 0 and game_state.fight_god > game_state.early_game_over:
+            game_state.current_enemy = enemies.create_random_enemy()
+            utils.slow_print(f"Prepare to face {game_state.current_enemy.type}!")
 
-        elif next_overlord > 0 and fight_god <= early_game_over:
-            current_enemy = enemies.create_greater_enemy(fight_god, game_midpoint, starting_late_game)
-            if current_enemy.type == "Catgirl":
+        elif game_state.next_overlord > 0 and game_state.fight_god <= game_state.early_game_over:
+            game_state.current_enemy = enemies.create_greater_enemy(game_state)
+            if game_state.current_enemy.type == "Catgirl":
                 print("Nyaaa~!")
-            elif current_enemy.type == "Abomination":
+            elif game_state.current_enemy.type == "Abomination":
                 print("A formless horror wants to play dodgeball with you!")
             else:
-                print(f"A {current_enemy.type} approaches!")
-        elif next_overlord <= 0 and fight_god > 54:
-            current_enemy = enemies.create_overlord()
+                print(f"A {game_state.current_enemy.type} approaches!")
+        elif game_state.next_overlord <= 0 and game_state.fight_god > 54:
+            game_state.current_enemy = enemies.create_overlord()
             utils.slow_print("A Dodgeball Overlord challenges you!")
-            next_overlord = 9
-        elif next_overlord <= 0 and fight_god <= 54:
-            current_enemy = enemies.create_greater_overlord()
+            game_state.next_overlord = 9
+        elif game_state.next_overlord <= 0 and game_state.fight_god <= 54:
+            game_state.current_enemy = enemies.create_greater_overlord()
             utils.slow_print("A Badass Freakin' Overlord has appeared!")
-            next_overlord = 9
+            game_state.next_overlord = 9
 
-        # The player's turn is set to on at the start of each new fight.
-        # And the current enemy is locked in for a fight function use.
-        player_turn = True
-        current_enemy = combat.fight(player_character, current_enemy, player_turn, next_overlord, next_shop, fight_god, eye_of_omens_counter, demon_counter, god_charged, god_turn_counter)
-        if player_character.hp < 1:
+        # Initiates combat between the player and current enemy.
+        combat_state = combat.CombatState(player_character, game_state.current_enemy)
+        # Retrieves the fight results.
+        game_state.result = combat.fight(game_state, combat_state)
+
+        # Game ends and displays the player's stats if god is defeated.
+        if game_state.result == "GOD_DEFEATED":
+            print("YOU WIN!")
+            print("Your final attributes were:")
+            player.full_stats_display(player_character)
             break
 
-    # Game ends and displays the player's stats if god is defeated.
-    if current_enemy == "GOD_DEFEATED":
-        print("YOU WIN!")
-        print("Your final attributes were:")
-        player.full_stats_display(player_character)
-        break
-
-    # If the player is defeated they can choose a difficulty and
-    # start again. This will refresh player attributes and reset global variables.
-    if player_character.hp < 1:
-        utils.slow_print("You have been defeated! But the demon demands more dodgeball...")
-        print("-" * 40)
-        difficulty_selection = 0
-        easy_mode = False
+        # If the player is defeated they can choose a difficulty and
+        # start again. This will refresh player attributes and reset global variables.
+        if game_state.result == "PLAYER_DEFEATED":
+            utils.slow_print("You have been defeated! But the demon demands more dodgeball...")
+            print("-" * 40)
+            difficulty_selection = 0
+            game_state = GameState()
 
         while difficulty_selection not in ["1", "2"]:
             print("Will you try again?")
@@ -212,9 +204,9 @@ while True:
             difficulty_selection = input("Choose: ")
     
             if difficulty_selection == "2":
-                easy_mode = True
+                game_state.easy_mode = True
             elif difficulty_selection == "1":
-                easy_mode = False
+                game_state.easy_mode = False
             else:
                 print("Choose 1 or 2.")
                 
@@ -229,17 +221,7 @@ while True:
             player_character.money = 120
             player_character.hp = player_character.max_hp()
             player_character.stamina = player_character.max_stamina()
-        
-        current_enemy = 0
-        next_shop = 9
-        next_overlord = 9
-        fight_god = 108
-        eye_of_omens_counter = 0
-        demon_counter = 0
-        player_turn = True
-                
-        god_charged = False
-        god_turn_counter = 0
+
     else:
         break
                 

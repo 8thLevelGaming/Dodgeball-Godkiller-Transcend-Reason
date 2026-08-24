@@ -18,11 +18,14 @@ class Player:
         self.agility = 10
         self.endurance = 10
         self.demon_bonus_applied = 0
+        self.eye_of_omens_counter = 0
+        self.demon_counter = 0
+        self.invulnerable = False
+        self.player_turn = True
         self.exp = 0
         self.money = 80
         self.sardine_inventory = 3
         self.spellcard_inventory = 1
-        self.invulnerable = False
         self.owned_items = []
         self.effects = {}
         self.hp = self.max_hp()
@@ -38,6 +41,14 @@ class Player:
         return (self.endurance // 10)
     def stamina_regen(self) -> int:
         return (self.endurance // 4)
+
+    # I am turning the demon mode bonus into a function so we can make it
+    # Scale with the player's level throughout the game, making it weaker
+    # early but stronger later on.
+    # The demon mode bonus is equal to half the player's level, starting at
+    # +6 to all stats except endurance, and ending up around +50.
+    def demon_bonus_result(player_character):
+        return player_character.level // 2
 
 # This function is meant to display the player's level, exp, HP, and stamina.
 def stats_display(player_character):
@@ -129,14 +140,6 @@ def adjusted_stamina_cost(player_character, base_cost):
     graceful_total = player_character.effects.get("graceful", 0)
     adjusted_cost = base_cost - graceful_total
     return max(1, adjusted_cost)
-
-# I am turning the demon mode bonus into a function so we can make it
-# Scale with the player's level throughout the game, making it weaker
-# early but stronger later on.
-# The demon mode bonus is equal to half the player's level, starting at
-# +6 to all stats except endurance, and ending up around +50.
-def demon_bonus_result(player_character):
-    return player_character.level // 2
 
 # Function that is called when the player levels up.
 # They can choose one of their attributes to increase by 2.
