@@ -485,7 +485,7 @@ def fight(game_state, combat_state):
         # then their turn is skipped, and if they enemy is
         # god then it uses a different set of actions instead of
         # only basic attacks.
-        if combat_state.player_turn is False and combat_state.enemy.hp > 0:
+        if combat_state.player.player_turn is False and combat_state.enemy.hp > 0:
             if getattr(combat_state.enemy, "stunned", False):
                 print("The enemy is stunned and cannot attack!")
                 combat_state.enemy.stunned = False
