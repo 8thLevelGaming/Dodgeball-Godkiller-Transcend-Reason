@@ -502,7 +502,7 @@ def fight(game_state, combat_state):
             else:
                 utils.slow_print(f"{combat_state.enemy.type} throws a dodgeball at you!")
                 dodge_calc(combat_state)
-            combat_state.player_turn = True
+            combat_state.player.player_turn = True
 
         # The buff duration decrements were moved here so they'll run
         # correctly even if the player checks their stats.

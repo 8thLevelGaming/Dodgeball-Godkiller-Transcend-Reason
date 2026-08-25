@@ -97,6 +97,8 @@ In your hands there can be no greater weapon.
 
 It is time to create an international incident or two!""")
 
+input("Press Enter key to begin your rampage!")
+
 # This just makes a line for readability.
 # We do this after each turn too.
 print("-" * 40)
