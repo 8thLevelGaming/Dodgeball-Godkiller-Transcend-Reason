@@ -6,10 +6,10 @@ import utils
 import enemies
 import random
 
-# Function to take player input when making decisions.
 def player_options(combat_state):
-    # The options variable is a dictionary keying numbers to the options
-    # available in a fight.
+    """This function presents the player with options and takes their input, then returns it.
+    The options variable is a dictionary keying numbers to the options."""
+
     options = {
         "1": f"Basic Shot ({combat_state.player.stamina_costs('1')}). A simple throw.",
         "2": f"Meteor Shot ({combat_state.player.stamina_costs('2')}). Jump and throw from above!",
@@ -36,6 +36,7 @@ def player_options(combat_state):
 # Functions that calculate damage for normal hits, critical hits, and grazes.
 # Critical hits do double damage, grazes deal half damage.
 def damage_calc(attack_type, combat_state):
+    """This function calculates how much damage the player does with a solid hit."""
     # Attack type can multiply damage.
     multiplier = player.attack_multipliers[attack_type]
     # Damage takes both strength and level into account.
@@ -64,10 +65,10 @@ def damage_calc(attack_type, combat_state):
         effects_on_hit(combat_state, total_damage, attack_type, is_critical=False)
         return total_damage
 
-# This is the same calculation, but for critical hits, meaning
-# damage is doubled. Due to the way attack multiplies work
-# Special attacks can be multiplied even more than that.
 def crit_calc(attack_type, combat_state):
+    """This function uses the same damage calculation, but the result is doubled.
+    It is called on critical strikes. Due to the way attack multiplies work
+    Special attacks can be multiplied even more than that."""
     multiplier = player.attack_multipliers[attack_type]
     total_damage = ((combat_state.player.strength + random.randint(1,combat_state.player.level)) * 2) * multiplier
     heroic_multiplier = heroic_resolve_calculator(combat_state)
@@ -87,9 +88,9 @@ def crit_calc(attack_type, combat_state):
         effects_on_hit(combat_state, total_damage, is_critical=True)
         return total_damage
 
-# Graze is the same but damage is halved.
-# Grazes do not apply on-hit effects either.
 def graze_calc(attack_type, combat_state):
+    """If the player came slightly short of a hit, they graze the enemy instead.
+    This deals half damage and does not apply on-hit effects, unlike hits and crits."""
     multiplier = player.attack_multipliers[attack_type]
     total_damage = ((combat_state.player.strength + random.randint(1,combat_state.player.level)) // 2) * multiplier
     heroic_multiplier = heroic_resolve_calculator(combat_state)
@@ -106,15 +107,15 @@ def graze_calc(attack_type, combat_state):
         combat_state.enemy.hp = combat_state.enemy.hp - total_damage
         return total_damage
 
-# Function to calculate if an attack hits, crits, grazes, or misses.
-# The player hits if their attack roll exceeds enemy AC by 30.
-# And grazes if they fail to hit the AC by less than 30.
-# With the starting precision value of 10 and no boosts, a player would have to
-# roll 50 or higher to hit a hypothetical enemy with 10 agility.
-# If the enemy has 15 agility this required roll would change to 100.
-# Each point of precision translates to a 5% chance to upgrade an attack to
-# the next tier of hit.
 def hit_calc(attack_type, combat_state):
+    """This is the function that calculates attack rolls.
+    It determines if the player hits the enemy, and what quality of hit
+    they accomplish (possibilities are crit, hit, graze, miss).
+    With the starting precision value of 10 and no boosts, a player would have to
+    roll 50 or higher to hit a hypothetical enemy with 10 agility.
+    If the enemy has 15 agility this required roll would change to 100.
+    Each point of precision translates to a 5% chance to upgrade an attack to
+    the next tier of hit."""
     # The Eye of Omens grants a considerable flat boost to attack rolls
     # if active, equivalent to about 8 precision points.
     eye_of_omens_bonus = 0
@@ -130,7 +131,9 @@ def hit_calc(attack_type, combat_state):
     hit_result = "miss"
 
     print(f"\nYour Attack Roll = {attack_roll}. Enemy Armor Class = {armor_class}.")
-    
+
+    # The player crits if their attack roll exceeds enemy AC by at least 30.
+    # They graze if they miss by less than 30.
     if attack_roll >= 30 + armor_class:
         hit_result = "crit"
     elif attack_roll >= armor_class:
@@ -184,15 +187,14 @@ def hit_calc(attack_type, combat_state):
         else:
             utils.slow_print("Miss!")
 
-# We add some functions for other special effects from items.
-# We start with a function that will handle effects that apply
-# after an enemy takes damage.
 def effects_on_hit(combat_state, total_damage, is_critical=False):
+    """This function handles effects that apply after the player deals damage to
+    an enemy with their attacks, such as lifesteal and obliterate."""
     lifesteal_total = combat_state.player.effects.get("lifesteal", 0)
     echo_hit_total = combat_state.player.effects.get("echo hit", 0)
     obliterate_total = combat_state.player.effects.get("obliterate", 0)
 
-        # Lifesteal heals the player for a percentage of the damage taken.
+    # Lifesteal heals the player for a percentage of the damage taken.
     # So the function adds the total potency from the player's items together.
     # Then if the player has any lifesteal it calculates the amount of hp healed.
     # by first dividing the lifesteal total by 100 and multiplying the damage
@@ -222,22 +224,22 @@ def effects_on_hit(combat_state, total_damage, is_critical=False):
             combat_state.enemy.hp = 0
             return
 
-# This is one of the mathier functions, which calculates the bonus damage
-# from Heroic Resolve. While the player has Heroic Resolve among their item
-# effects they deal more damage as their HP is lower, up to a maximum of
-# around double damage with all relevant items equipped.
-# The formula is similar to the one for the iconic OSRS Dharok set, but
-# modified for a game where HP can go well above 99.
 def heroic_resolve_calculator(combat_state):
+    """This is one of the mathier functions, which calculates the bonus damage
+    from Heroic Resolve. While the player has Heroic Resolve among their item
+    effects they deal more damage as their HP is lower, up to a maximum of
+    around double damage with all relevant items equipped.
+    The formula is similar to the one for the iconic OSRS Dharok set, but
+    modified for a game where HP can go well above 99."""
     resolve_total = combat_state.player.effects.get("heroic resolve", 0)
     max_hp = combat_state.player.max_hp()
     missing_percentage = (max_hp - combat_state.player.hp) / max_hp
     heroic_bonus = 1 + missing_percentage * (resolve_total / 100)
     return heroic_bonus
 
-# This one applies effects when the player is hit. Note we grab
-# damage_report in the arguments to use for retribution.
 def effects_on_damage_taken(combat_state, damage_report):
+    """This one applies effects when the player is hit.
+    We take damage_report in the arguments to use for retribution."""
     retribution = combat_state.player.effects.get("retribution", 0)
     resilient = combat_state.player.effects.get("resilient", 0)
 
@@ -257,33 +259,33 @@ def effects_on_damage_taken(combat_state, damage_report):
                 print("You are still standing!")
 
 # These functions mirror the player calculation ones, but roll enemy damage.
-# They use the minimum and maximum damage variables stored in the enemy classes
-# as the arguments in randint, giving each enemy a custom damage range.
 def enemy_damage_calc(combat_state):
+    """Uses the minimum and maximum damage values in an enemy class to
+    roll damage dealt to the player on hit."""
     total_damage = random.randint(combat_state.enemy.damage_min, combat_state.enemy.damage_max)
     combat_state.player.hp = combat_state.player.hp - total_damage
     return total_damage
 
 def enemy_graze_calc(combat_state):
+    """Rolls damage dealt to the player when the enemy grazes them."""
     total_damage = (random.randint(combat_state.enemy.damage_min, combat_state.enemy.damage_max) // 2)
     combat_state.player.hp = combat_state.player.hp - total_damage
     return total_damage
 
-# This small function rolls a stun chance percentage used by hit_calc()
-# to give Meteor Shot a chance to stun enemies it successfully hits.
-# Their stun status is then checked 
-# The default stun chance is 25% but crits are given an argument
-# boosting that to 33%.
 def stun_check(current_enemy, chance=25):
+    """This small function rolls a stun chance percentage used by hit_calc().
+    It gives Meteor Shot a chance to stun enemies it successfully hits.
+    Their stun status is then checked. The default stun chance is 25% but 
+    crits are given an argument boosting that to 33%."""
     if random.randint(1, 100) <= chance:
         current_enemy.stunned = True
         utils.slow_print(f"{current_enemy.type} is stunned by the attack!")
         
-# Function to calculate if the player is hit.
-# It works the same for enemies as it does for players.
-# Except the Eye of Omens bonus also applies defensively here and
-# The enemies are unable to score critical hits.
 def dodge_calc(combat_state):
+    """This is partially a mirrored hit_calc().
+    Except it rolls the chance for the player to be hit by the enemy.
+    The Eye of Omens bonus applies defensively here.
+    And enemies are unable to score critical hits."""
     attack_roll = (combat_state.enemy.precision * 5) + random.randint(0,100)
     eye_of_omens_bonus = 0
     
@@ -310,6 +312,11 @@ def dodge_calc(combat_state):
         utils.slow_print("You catch the dodgeball!")
 
 class CombatState:
+    """This class tracks the variables used in combat.
+    It refers to the player and current enemy so those objects are updated.
+    And then it also keeps track of whether the dodgeball god has charged
+    an attack and whether it is due for a power boost.
+    It also logs the result variable to track if the player has won or lost."""
     def __init__(self, player_character, current_enemy):
         self.player = player_character
         self.enemy = current_enemy
@@ -317,8 +324,8 @@ class CombatState:
         self.god_turn_counter = 0
         self.result = None
 
-# Function to initiate a fight with the enemy that was rolled.
 def fight(game_state, combat_state):
+    """Core function that initiates and handles combat with the rolled enemy."""
     # it starts a loop to have both player and enemy stats on display every turn.
     # The player's turn always happens first.
     while True:
@@ -515,12 +522,10 @@ def fight(game_state, combat_state):
 
     return "PLAYER_DEFEATED"
 
-# This function handles the Dodgeball God's behavior.
-# This is intended to be a two-phase fight against an opponent who
-# becomes stronger over time and sometimes uses very damaging moves
-# that call for the use of defensive buffs or the coming spellcard item.
-# We use global variables for the boss states so they won't reset on their own.
 def god_actions(combat_state):
+    """This function handles the dodgeball god's behavior.
+    It is intended to be a two-phase fight against an opponent
+    who grows stronger over time."""
 
     # The enemy's shield special turns off at the start of its next turn if it was active.
     combat_state.enemy.shield_active = False
@@ -590,8 +595,8 @@ def god_actions(combat_state):
         else:
             dodge_calc(combat_state)
 
-# random.choice is used to return a random move from the list.
 def god_name_randomizer():
+    """The random.choice function is used to return a random move from the list."""
     return random.choice(god_move_names)
 
 # God has some very intense moves, chosen randomly from this list.

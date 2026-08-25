@@ -11,6 +11,8 @@ import items
 # Later on we also added the player's consumables here and whether or
 # not they have invulnerability on from using a spellcard.
 class Player:
+    """This is the player character. Her stats are initialized as follows and slightly boosted on easy mode.
+    This also keeps track of her state, whether or not it's her turn, and her inventory."""
     def __init__(self):
         self.level = 12
         self.strength = 10
@@ -69,8 +71,9 @@ class Player:
         base_cost = base_costs[attack_key]
         return adjusted_stamina_cost(self, base_cost)
 
-# This function is meant to display the player's level, exp, HP, and stamina.
 def stats_display(player_character):
+    """This function displays the character's level, exp, HP, and stamina.
+    Some of these values are made into pseudo-graphical bars."""
     # We use the make_bar function above to display player values as bars.
     # Note that since max HP and max Stamina are methods we need to call them
     # with () so that the program will always recalculate the maximums.
@@ -83,6 +86,8 @@ def stats_display(player_character):
 
 # This expanded status display shows the four player attributes.
 def full_stats_display(player_character):
+    """When the player chooses to, they can use this function to view their attributes and
+    also their active item effects."""
     print(f"\nStrength: {player_character.strength} | Precision: {player_character.precision} | Agility: {player_character.agility} | Endurance: {player_character.endurance} | Money: ${player_character.money}")
     # If the player picked up items with effects we display those too.
     if player_character.effects:
@@ -118,11 +123,9 @@ attack_multipliers = {
 # stamina to perform an action and it performs the action and deducts
 # the cost. For this function we are going to be using another
 # function as one of its arguments (effect) through the use of lambda.
-# details on that further below.
 def stamina_checker(player_character, cost, flavor_text, effect):
-    # The checker first measures if the player has enough stamina,
-    # then prints flavor text and performs an effect.
-    # Then it deducts the stamina cost.
+    """This function confirms that the player has enough stamina to perform an action and
+    if so it prints the flavor text, performs the action, and deducts its stamina cost."""
     if player_character.stamina >= cost:
         print(flavor_text)
         effect()
@@ -132,23 +135,18 @@ def stamina_checker(player_character, cost, flavor_text, effect):
         print("Not enough stamina!")
         return False
 
-# This function uses the graceful item effect to reduce stamina costs.
-# Abilities that cost stamina will always have a minimum cost of 1.
-# It takes the base_cost variable from stamina_costs for this operation.
-# We use the .get() function to see if the player has the "graceful"
-# effect and default its value to 0, but if they do have it then it will
-# not be 0.
+
 def adjusted_stamina_cost(player_character, base_cost):
+    """This function applies a stamina discount to the player if they have the graceful item effect.
+    Abilities that cost stamina will always have a minimum cost of 1.
+    The function takes the base cost out of stamina costs for this operation and we use .get() to
+    see if the player has the graceful effect, with a placeholder value of 0 if they don't."""
     graceful_total = player_character.effects.get("graceful", 0)
     adjusted_cost = base_cost - graceful_total
     return max(1, adjusted_cost)
 
-# Function that is called when the player levels up.
-# They can choose one of their attributes to increase by 2.
-# It uses the same kind of options display logic as the previous
-# function but rather than executing effects the chosen option
-# instead increases a player stat.
 def level_up(player_character):
+    """This function handles the player leveling up. They can improve one attribute by 2 each level."""
     options = {
         "1": "Strength. Throw harder!",
         "2": "Precision. Hit more, crit more!",

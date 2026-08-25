@@ -11,8 +11,9 @@ import utils
 # As a reminder, a player's starting stats give them 100 AC and
 # +50 on attack rolls.
 
-# This is an agile enemy with 140 AC and +75 on attack rolls.
+# 
 class AgileFoe:
+    """This is an agile enemy with 140 AC and +75 on attack rolls."""
     def __init__(self):
         self.type = "Agile Foe"
         self.hp = 15 + random.randint(5,15)
@@ -24,10 +25,10 @@ class AgileFoe:
         self.money_reward = random.randint(15, 25)
         self.defeat = "'Unforgivably slow...'"
 
-# Function to make the current enemy strong but clumsy.
-# It has 90 AC and +70 on attack rolls but deals more damage
-# and has more health compared to the agile enemy.
 class MightyFoe:
+    """Function to make the current enemy strong but clumsy.
+    This one has 90 AC and +70 on attack rolls but deals more damage
+    and has more health compared to the agile enemy."""
     def __init__(self):
         self.type = "Mighty Foe"
         self.hp = 20 + random.randint(10,25)
@@ -39,10 +40,10 @@ class MightyFoe:
         self.money_reward = random.randint(15, 25)
         self.defeat = "'Nani?!'"
 
-# Function to generate a more balanced current enemy.
-# It is a sort of middle ground between the previous two.
-# With 130 AC and +80 on attack rolls while also being tough.
 class BalancedFoe:
+    """Function to generate a more balanced current enemy.
+    It is a sort of middle ground between the previous two.
+    With 130 AC and +80 on attack rolls while also being tough."""
     def __init__(self):
         self.type = "Balanced Enemy"
         self.hp = 20 + random.randint(5,20)
@@ -54,11 +55,11 @@ class BalancedFoe:
         self.money_reward = random.randint(20, 25)
         self.defeat = "'Augh!!!'"
 
-# Function to generate a weak mook.
-# This is the weakest enemy in the game and not very threatening.
-# Has only 70 AC and +45 on attacks, meaning that even at the start
-# of the game they will be easy to hit and dodge.
 class Weakling:
+    """Function to generate a weak mook.
+    This is the weakest enemy in the game and not very threatening.
+    Has only 70 AC and +45 on attacks, meaning that even at the start
+    of the game they will be easy to hit and dodge."""
     def __init__(self):
         self.type = "Weakling"
         self.hp = random.randint(5,15)
@@ -70,14 +71,14 @@ class Weakling:
         self.money_reward = random.randint(5, 15)
         self.defeat = "'Weh!'"
 
-# Function to generate a tough elite enemy.
-# This is the strongest random option in the early enemy table.
-# Has 150 AC (nearly impossible to hit without buffs or Helios Dive
-# before upgrading precision) and +90 on attacks, meaning it
-# will almost always hit the player with 10 agility.
-# A starting player may need to use a sardine and go all out with
-# Eye of Omens, Demon Mode, and/or Helios Dive to win.
 class Elite:
+    """Function to generate a tough elite enemy.
+    This is the strongest random option in the early enemy table.
+    Has 150 AC (nearly impossible to hit without buffs or Helios Dive
+    before upgrading precision) and +90 on attacks, meaning it
+    will almost always hit the player with 10 agility.
+    A starting player may need to use a sardine and go all out with
+    Eye of Omens, Demon Mode, and/or Helios Dive to win."""
     def __init__(self):
         self.type = "Elite"
         self.hp = 45 + random.randint(10,20)
@@ -89,12 +90,11 @@ class Elite:
         self.money_reward = random.randint(30, 50)
         self.defeat = "'No! It can't be!'"
 
-# Function to make stats for a Dodgeball Overlord.
-# This is a sort of mini-boss that appears periodically and
-# drops spellcards. Replaced by a stronger variant past mid-game.
-# It has 180 AC and +110 to attack rolls, making it very deadly
-# early on.
 class Overlord:
+    """Function to make stats for a Dodgeball Overlord.
+    This is a sort of mini-boss that appears periodically and
+    drops spellcards. Replaced by a stronger variant past mid-game.
+    It has 180 AC and +110 to attack rolls, making it very deadly early on."""
     def __init__(self):
         self.type = "Dodgeball Overlord"
         self.hp = 100
@@ -109,10 +109,10 @@ class Overlord:
 # Tier 2 enemy sheets. These ones show up only on the second
 # enemy table.
 
-# Catgirls are agile but also tougher than most previous foes.
-# With 180 AC and +115 on attacks they are comparable to overlords.
-# But deal less damage and have less health.
 class Catgirl:
+    """Catgirls are agile but also tougher than most previous foes.
+    With 180 AC and +115 on attacks they are comparable to overlords.
+    But deal less damage and have less health."""
     def __init__(self):
         self.type = "Catgirl"
         self.hp = 50 + random.randint(20,35)
@@ -124,11 +124,10 @@ class Catgirl:
         self.money_reward = random.randint(25, 50)
         self.defeat = "'N-nyaaa...'"
 
-# Psychics are more frail than catgirls but their powers let them
-# control the ball in ways that make them hard to hit and dodge
-# compared to tier 1 enemies.
-# They have 170 AC and +125 on attacks but don't hit too hard.
 class Psychic:
+    """Psychics are more frail than catgirls but their powers let them
+    control the ball in ways that make them harder to hit and dodge
+    They have 170 AC and +125 on attacks but don't hit too hard."""
     def __init__(self):
         self.type = "Psychic"
         self.hp = 30 + random.randint(10,20)
@@ -140,9 +139,9 @@ class Psychic:
         self.money_reward = random.randint(30, 50)
         self.defeat = "'I have foreseen your every move... and concluded I can't win! See ya!'"
 
-# Musha are armored warriors with good stats all around.
-# 190 AC and +150 on attacks.
 class Musha:
+    """Musha are armored warriors with good stats all around.
+    190 AC and +150 on attacks."""
     def __init__(self):
         self.type = "Musha"
         self.hp = 85 + random.randint(15,100)
@@ -154,12 +153,12 @@ class Musha:
         self.money_reward = random.randint(25, 60)
         self.defeat = "'It was you!!!'"
 
-# Abominations have very wide HP and damage ranges, meaning
-# they are unpredictable but potentially run-ending threats.
-# Must be taken seriously if encountered early.
-# 210 AC and +200 on attack rolls means they will hit consistently
-# until the player has at least 20 agility.
 class Abomination:
+    """Abominations have very wide HP and damage ranges, meaning
+    they are unpredictable but potentially run-ending threats.
+    Must be taken seriously if encountered early.
+    210 AC and +200 on attack rolls means they will hit consistently
+    until the player has at least 20 agility."""
     def __init__(self):
         self.type = "Abomination"
         self.hp = 100 + random.randint(100,350)
@@ -171,9 +170,9 @@ class Abomination:
         self.money_reward = random.randint(60, 85)
         self.defeat = "'...'"
 
-# Dragons don't start appearing until halfway through the game.
-# They are always very durable and have 260 AC and +250 on attacks.
 class Dragon:
+    """Dragons don't start appearing until halfway through the game.
+    They are always very durable and have 260 AC and +250 on attacks."""
     def __init__(self):
         self.type = "Dragon"
         self.hp = 500
@@ -185,9 +184,8 @@ class Dragon:
         self.money_reward = random.randint(60, 95)
         self.defeat = "'A mere human cannot surpass me! I am perfection! Who are you?!'"
 
-# Kaiju are endgame enemies with 300 AC and +300 on attacks,
-# a huge step up from even dragons.
 class Kaiju:
+    """Kaiju are endgame enemies with 300 AC and +300 on attacks."""
     def __init__(self):
         self.type = "Kaiju"
         self.hp = 1200
@@ -199,11 +197,11 @@ class Kaiju:
         self.money_reward = random.randint(75, 100)
         self.defeat = "'SKREOOONK'"
 
-# Upgraded overlord that starts appearing starting in the mid-game.
-# With 350 AC and +325 on attacks they are in some ways stronger than
-# kaijus, in ways that can more than make up for thier lower damage
-# and health. They may be the strongest non-unique enemies in the game.
 class BadassOverlord:
+    """Upgraded overlord that starts appearing starting in the mid-game.
+    With 350 AC and +325 on attacks they are in some ways stronger than
+    kaijus, in ways that can more than make up for thier lower damage
+    and health. They may be the strongest non-unique enemies in the game."""
     def __init__(self):
         self.type = "Badass Freakin' Overlord"
         self.hp = 1000
@@ -215,16 +213,14 @@ class BadassOverlord:
         self.money_reward = 100
         self.defeat = "'I found a worthy opponent right at the end... I can move on with a smile.'"
 
-# Function to create the Dodgeball God. This is a final boss
-# that has a couple of additional values for its shield and
-# phase 2 activation.
-# Additionally with 350 AC the player will reach 100% chance
-# to hit it with 70 precision but less than that would be
-# a struggle. It also has +500 on attack rolls, meaning 60
-# agility is needed to ensure it won't hit, and even then
-# it grows stronger periodically and when going under 50%
-# HP, so high agility is only a temporary shield.
 class God:
+    """Function to create the Dodgeball God. This is a final boss that has
+    a couple of additional values for its shield and phase 2 activation.
+    Additionally with 350 AC the player will reach 100% chance to hit it
+    with 70 precision but less than that would be a struggle.
+    It also has +500 on attack rolls, meaning 60 agility is needed to ensure it 
+    won't hit, and even then it grows stronger periodically and when going under 
+    50% HP, so high agility is only a temporary shield."""
     def __init__(self):
         self.type = "Dodgeball God"
         self.hp = 10000
@@ -261,11 +257,9 @@ def get_defeat_message(enemy_type):
 
     return defeat_messages.get(enemy_type, "You have been defeated!")
 
-# Function that creates an enemy of a random type.
-# It rolls a random number between 0 and 100 and
-# uses if/elif branches to divide the options into
-# ranges kind of like a TTRPG random encounter table.
 def create_random_enemy():
+    """This function generates basic enemies by rolling between 0 and 100
+    and then using if/elif branches to simulate a TTRPG random encounter table."""
     enemy_roll = random.randint(0,100)
     if enemy_roll <= 25:
         new_enemy = AgileFoe()
@@ -281,11 +275,10 @@ def create_random_enemy():
     # We return the result of the roll.
     return new_enemy
 
-# We make a very similar function that will be used to roll mid and
-# late-game enemies once the next_god counter puts the player out of
-# the early game. This other function will roll different ranges
-# depending on the stage of the game.
 def create_greater_enemy(fight_god, game_midpoint, starting_late_game):
+    """Similar function to before, but used to make midgame and lategame enemies.
+    The strongest enemies only start spawning when the game has progressed past
+    the 50% and 75% marks. Earlier in the game it is impossible to roll dragons or kaiju."""
     if fight_god > game_midpoint:
         enemy_roll = random.randint(0, 100)
     elif fight_god > starting_late_game:
@@ -325,6 +318,6 @@ def create_god():
     dodgeball_god = God()
     return dodgeball_god
     
-# Simple function that displays enemy type and HP.
 def enemy_stats_display(current_enemy):
+    """Simple function that displays enemy type and HP."""
     print(f"\nCurrent Enemy: {current_enemy.type} | Enemy HP: {current_enemy.hp}")

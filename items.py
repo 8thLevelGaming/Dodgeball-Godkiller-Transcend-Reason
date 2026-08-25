@@ -407,17 +407,8 @@ percentage_effects = [
     "crow"
 ]
 
-# The fourth and fifth lines grab the stat's name (capitalized) and the boost amount.
-# Then there is an if/else loop. If the item provides a bonus it will be added to the
-# empty list as a string made up of the name and value, with a + sign.
-# The else: branch is mostly meant for future-proofing in case I want to add items that
-# reduce a stat in favor of another in the future, or modify existing items to do that.
-#After that we add another if statement that will check for fancier effects later
-# versions of the program hope to implement.
-# The final line uses .join() to combine the strings in the effects list into one, 
-# separated by commas.
-# This function is used to display the effects of items in the shop.
 def item_effects_display (item_name):
+    """This function is used to display the item effects."""
     
     # The first lines within the function grabs an item's data 
     # from the item_pool dictionary and make an effects list.
@@ -432,6 +423,9 @@ def item_effects_display (item_name):
             amount = boost["amount"]
             if amount > 0:
                 effects.append(f"{stat_name} +{amount}")
+
+            # The else: branch is mostly meant for future-proofing in case I want to add items that
+            # reduce a stat in favor of another in the future, or modify existing items to do that.
             else:
                 effects.append(f"{stat_name} {amount}")
 
@@ -446,18 +440,17 @@ def item_effects_display (item_name):
         else:
             effects.append(f"{special_name} {special_potency}")
 
-    # We separate the effects with a comma and space.
+    # The final line uses .join() to combine the strings in the effects list into one, # separated by commas.
     return ", ".join(effects)
 
-# This function collects an item's price based on its rarity.
-# It is given the item_name argument and then it looks up its
-# rarity in the item pool, using that to determine its price.
 def item_price(item_name):
+    """This function collects an item's price based on its rarity.
+    It is given the item_name argument and then it looks up its
+    rarity in the item pool, using that to determine its price."""
     return rarity_prices[item_pool[item_name]["rarity"]]
 
-# I have moved the application of item effects to the player into its own
-# function to keep the code DRY and neat.
 def apply_item_effects(item_name, player_character):
+    """This function applies the effects of acquired items."""
     details = item_pool[item_name]
 
     # It collects the data from items in the pool and uses

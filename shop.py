@@ -1,23 +1,25 @@
+"""This module contains the code for the shop and gym."""
+
 import items
 import random
 import player
 import utils
 
-# This is the function that rolls random items on each separate shop visit.
-# Available items are those in the item pool but not in the player's inventory.
-# It runs a for loop for every name in the pool.
 def item_roll(player_character):
+    """This is the function that rolls random items on each separate shop visit.
+    Available items are those in the item pool but not in the player's inventory.
+    It runs a for loop for every name in the pool."""
     available = [name for name in items.item_pool if name not in player_character.owned_items]
     # There is a bit of protection against rolling less than 3 available items but
     # I made so many that it is impossible to deplete the list in full playthrough.
     count = min(3, len(available))
     return random.sample(available, count)
     
-# This is the gym function for the shop below.
-# It calculates how much exp the player needs to level up.
-# And if the player has money equal to that amount it purchases the exp
-# at a ratio of $2 per experience point to level up.
 def gym(player_character):
+    """This is the gym function for the shop below.
+    It calculates how much exp the player needs to level up.
+    And if the player has money equal to that amount it purchases the exp
+    at a ratio of $2 per experience point to level up."""
     training_cost = gym_price(player_character)
     exp_to_buy = training_cost // 2
     if player_character.money >= training_cost:
@@ -34,13 +36,13 @@ def gym(player_character):
     else:
         print("You can't afford to go to the gym...")
 
-# Function returns the cost of using the gym.
 def gym_price(player_character):
+    """Function calculates and returns the cost of using the gym."""
     gym_price = (100 - player_character.exp) * 2
     return gym_price
 
-# Lists and rolls randomized flavor text you can get when going to the gym.
 def random_gym_text():
+    """Lists and rolls randomized flavor text you can get when going to the gym."""
     gym_flavors = [
         "You lift heavy weights and run around for a while!",
         "You obliterate several target dummies with your throws!",
@@ -50,16 +52,13 @@ def random_gym_text():
     chosen_text = random.choice(gym_flavors)
     return chosen_text
 
-# Function that creates a shop the player periodically visits.
-# At this shop, the player can buy a meal to fully restore HP and stamina.
-# The player can also find three randomized items. Only one of them
-# can be bought on each shop visit.
-# This function uses getattr and setattr. These help with
-# saving object attributes into strings.
-# For example, setattr(player, "strength", 15) is the same as
-# player.strength = 15. There are cases where this is preferable, such as
-# when an attribute is decided at runtime.
 def visit_shop(player_character):
+    """Function that creates a shop the player periodically visits.
+    At this shop, the player can buy a meal to fully restore HP and stamina.
+    The player can also find three randomized items. Only one of them can be bought on each shop visit.
+    This function uses getattr and setattr. These help with saving object attributes into strings.
+    For example, setattr(player, "strength", 15) is the same as player.strength = 15. 
+    There are cases where this is preferable, such as when an attribute is decided at runtime."""
     available_items = item_roll()
     # We make it so every shop visit the player enters as not having
     # already bought an item, enabling them to buy a new one.
