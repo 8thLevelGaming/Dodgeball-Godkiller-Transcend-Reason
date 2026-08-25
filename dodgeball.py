@@ -80,7 +80,7 @@ while True:
         if start_game == 1:
             break
         elif start_game == 2:
-            easy_mode = True
+            game_state.easy_mode = True
             break
         else:
             print("\nPlease press 1 or 2!")
@@ -214,7 +214,7 @@ while True:
                 
         player_character = player.Player()
 
-        if easy_mode is True:
+        if game_state.easy_mode is True:
             player_character.level = 15
             player_character.strength = 12
             player_character.precision = 12
