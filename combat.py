@@ -43,7 +43,7 @@ def damage_calc(attack_type, combat_state):
     # as they level up.
     total_damage = (combat_state.player.strength + random.randint(1,combat_state.player.level)) * multiplier
     # Total Damage is affected by the Heroic Resolve item effect now.
-    heroic_multiplier = heroic_resolve_calculator(combat_state.player)
+    heroic_multiplier = heroic_resolve_calculator(combat_state)
     total_damage = total_damage * heroic_multiplier
     # Total damage is rounded before it is applied to prevent floats.
     total_damage = round(total_damage)
@@ -70,7 +70,7 @@ def damage_calc(attack_type, combat_state):
 def crit_calc(attack_type, combat_state):
     multiplier = player.attack_multipliers[attack_type]
     total_damage = ((combat_state.player.strength + random.randint(1,combat_state.player.level)) * 2) * multiplier
-    heroic_multiplier = heroic_resolve_calculator(combat_state.player)
+    heroic_multiplier = heroic_resolve_calculator(combat_state)
     total_damage = total_damage * heroic_multiplier
     total_damage = round(total_damage)
 
@@ -92,7 +92,7 @@ def crit_calc(attack_type, combat_state):
 def graze_calc(attack_type, combat_state):
     multiplier = player.attack_multipliers[attack_type]
     total_damage = ((combat_state.player.strength + random.randint(1,combat_state.player.level)) // 2) * multiplier
-    heroic_multiplier = heroic_resolve_calculator(combat_state.player)
+    heroic_multiplier = heroic_resolve_calculator(combat_state)
     total_damage = total_damage * heroic_multiplier
     total_damage = round(total_damage)
 
