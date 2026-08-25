@@ -387,7 +387,7 @@ def fight(game_state, combat_state):
         # and the player is then free to use their actions.
         while combat_state.player.player_turn and combat_state.enemy.hp > 0:
             print("")
-            player_move = player_options(combat_state.player)
+            player_move = player_options(combat_state)
             
             # Each attack is keyed to a dictionary above that matches its stamina cost and
             # runs the attack roll through lambda.
