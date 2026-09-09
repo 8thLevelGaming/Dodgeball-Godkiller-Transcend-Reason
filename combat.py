@@ -62,7 +62,7 @@ def damage_calc(attack_type, combat_state):
     # We return the damage for display.
     else:
         combat_state.enemy.hp = combat_state.enemy.hp - total_damage
-        effects_on_hit(combat_state, total_damage, attack_type, is_critical=False)
+        effects_on_hit(combat_state, total_damage, is_critical=False)
         return total_damage
 
 def crit_calc(attack_type, combat_state):
