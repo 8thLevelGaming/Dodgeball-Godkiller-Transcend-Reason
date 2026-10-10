@@ -1,0 +1,1968 @@
+# Claude (later replaced with Deepseek) helped me debug the code and explained several concepts to me,
+# such as why I'd want to use a dictionary to handle different attack types
+# and what the dictionary should look lie.
+# But it did not write or plan the program.
+# It was my idea to make a dodgeball combat RPG and I was the one in charge of
+# all of the design decisions, mechanics, and so on (and it shows).
+# I used the LLMs more as a (kind of clueless) teacher than as a substitute on this.
+# Because I seek the knowledge that will let me make much more complex games in the future.
+
+import random
+import time
+
+start_game = 0
+
+# Tutorial. Game starts only when the player presses 1.
+# I decided to not just start the game right away to give the player time
+# to read and absorb all of this information first.
+while True:
+    try:
+        print("""This is a simple Python game played entirely through 
+        the number keys. Your main attributes are:
+        1. Strength: Determines attack damage.
+        2. Precision: Determines chance to hit and score critical hits.
+        3. Agility: Determines chance to graze or dodge incoming hits.
+        4. Endurance: Determines maximum health and HP/stamina regen.
+        
+        You gain experience and money as you defeat your opponents.
+        You level up each time you reach 100 experience.
+        Money can be spent to buy equipment to empower yourself or
+        food to heal yourself.
+        
+        Sardines fully restore HP and Stamina. 
+        Spellcards negate damage taken for a round and deal some damage.
+        
+        Items acquired through play can have a variety of effects:
+        Lifesteal drains some of the enemy's health to recover your own.
+        Retribution deals automatic damage to enemies that hit you.
+        Echo Hit gives attacks a chance to trigger a bonus basic attack on target.
+        Graceful reduces all stamina costs by a listed flat amount.
+        Obliterate has a percentage chance to end an enemy on a critical hit.
+        Resilient gives you a % chance to survive a lethal attack with 1 hp.
+        Time Control increases the duration of temporary buffs by a flat amount.
+        Heroic Resolve increases damage dealt as your hp decreases.
+        Accurate has a % chance to upgrade miss into graze, and half that chance to upgrade graze into hit.
+        Hungry Beast enables the player to eat food without ending their turn.
+        Crow makes you more crow-like, increasing money gained and giving a chance for free sardines.""")
+        
+        start_game = int(input("""You can perform various dodgeball moves to fight.
+        Press 1 to start the game. """))
+        if start_game == 1:
+            break
+        else:
+            print("\nIf you understand, please press 1!")
+    except ValueError:
+        print("\nIf you understand, please press 1!")
+
+# Introduction text. This is just lore and backstory.
+print("""\nYou abandoned being a princess and trained all your life for this.
+You learned the most lethal dodgeball techniques the ancient masters knew.
+You trained your body to the limit and paired that with optimal nutrition.
+You studied the history of the sport and sought to master its principles.
+It was all building up to this day. You now hold the ultimate cursed dodgeball.
+In your hands there can be no greater weapon.
+
+It is time to create an international incident or two!""")
+
+# This just makes a line for readability.
+# We do this after each turn too.
+print("-" * 40)
+
+# Player Core Stats. Be warned that hp and stamina are methods rather
+# than integers, so they need parentheses when called in the future.
+# Some of the attributes also start out as empty lists/dicts that get
+# filled as the player acquires items.
+# Later on we also added the player's consumables here and whether or
+# not they have invulnerability on from using a spellcard.
+class Player:
+    def __init__(self):
+        self.level = 12
+        self.strength = 10
+        self.precision = 10
+        self.agility = 10
+        self.endurance = 10
+        self.demon_bonus_applied = 0
+        self.exp = 0
+        self.money = 80
+        self.sardine_inventory = 3
+        self.spellcard_inventory = 1
+        self.invulnerable = False
+        self.owned_items = []
+        self.effects = {}
+        self.hp = self.max_hp()
+        self.stamina = self.max_stamina()
+
+    # Player Derived Stats. These are functions so they can be easily 
+    # recalculated as the player levels up and increases stats.
+    def max_hp(self) -> int:
+        return 10 + (self.level * 2) + (self.endurance * 3)
+    def max_stamina(self) -> int:
+        return 10 + (self.level * 2) + (self.endurance // 2)
+    def hp_regen(self) -> int:
+        return (self.endurance // 10)
+    def stamina_regen(self) -> int:
+        return (self.endurance // 4)
+
+# This runs the Player class, instantiating its values into a variable 
+# called player. This variable gets refreshed if the player is defeated
+# and starts over (see bottom of program), wiping progress.
+# Because the game will always refer to this variable rather than the
+# class itself we use player in all lowercase to search for items in the
+# attached player class.
+player = Player()
+
+# Function that draws bars for a status display.
+# It takes the current HP/stamina/exp value as well as the maximum values for
+# those attributes (100 for exp since you always level up at 100).
+# Then the program fills bars based on the current value.
+
+# The way it works is that it uses division to determine what fraction
+# of the bar should be filled and this is the scaled through width,
+# then rounded to a whole number and we use the max function to
+# stop the bar from bugging out if it goes negative.
+def make_bar(current, maximum, width=20):
+    filled = round((current / maximum) * width)
+    filled = max(0, min(filled, width))
+    return "[" + ("#" * filled) + ("-" * (width - filled)) + "]"
+
+# This function is meant to display the player's level, exp, HP, and stamina.
+def stats_display():
+    # We use the make_bar function above to display player values as bars.
+    # Note that since max HP and max Stamina are methods we need to call them
+    # with () so that the program will always recalculate the maximums.
+    exp_bar = make_bar(player.exp, 100, width=20)
+    hp_bar = make_bar(player.hp, player.max_hp(), width=20)
+    stamina_bar = make_bar(player.stamina, player.max_stamina(), width=20)
+    print(f"\nLevel: {player.level} | {player.exp} / 100 {exp_bar}")
+    print(f"HP: {player.hp} / {player.max_hp()} {hp_bar}") 
+    print(f"Stamina: {player.stamina} / {player.max_stamina()} {stamina_bar}")
+
+# This expanded status display shows the four player attributes.
+def full_stats_display():
+    print(f"\nStrength: {player.strength} | Precision: {player.precision} | Agility: {player.agility} | Endurance: {player.endurance} | Money: ${player.money}")
+    # If the player picked up items with effects we display those too.
+    if player.effects:
+        print("---Active Effects ---")
+        # This for loop runs for every distinct effect that has been added to
+        # the player's inventory (pulls items from the player.effects dictionary).
+        # plus their total potencies. The loop essentially unpacks the dictionary.
+        for effect_name, potency in player.effects.items():
+            # We then check if the effect listed is in the list of effects that
+            # are percentage-based. If so we add a % at the end.
+            if effect_name in percentage_effects:
+                print(f"{effect_name}: {potency}%")
+            else:
+                print(f"{effect_name}: {potency}")
+    else:
+        print("No Active Effects")
+
+# This dictionary holds the three attacks available to the player and
+# their damage multipliers.
+# Meteor shot does a considerable amount of extra damage while
+# Helios Dive is an even more substantial finisher but costs a lot of
+# stamina to compensate. I also considered adding a cooldown to it
+# but at least for now decided not to.
+attack_multipliers = {
+    "Standard": 1.0,
+    "Meteor": 1.5,
+    "Helios": 2.5
+}
+
+# This function holds stamina costs so they can be more future-proofed.
+# It now also adjusts the stamina if the player has any Graceful items.
+# The way we're doing it like this rather than hardcoding them where they
+# are used is to make it so they can be neatly modified in one location
+# if we ever decide to modify or expand on them.
+def stamina_costs(attack_key): 
+    base_costs = {
+    "1": 8,
+    "2": 12,
+    "3": 10,
+    "4": 24
+    }
+
+    # We make a base_cost variable and call the adjusted_stamina_cost function
+    # so that the Graceful item effect can give the player a stamina discount
+    # if they have that.
+    base_cost = base_costs[attack_key]
+    return adjusted_stamina_cost(base_cost)
+
+# This other function checks to see if the player actually has enough
+# stamina to perform an action and it performs the action and deducts
+# the cost. For this function we are going to be using another
+# function as one of its arguments (effect) through the use of lambda.
+# details on that further below.
+def stamina_checker(player, cost, flavor_text, effect):
+    # The checker first measures if the player has enough stamina,
+    # then prints flavor text and performs an effect.
+    # Then it deducts the stamina cost.
+    if player.stamina >= cost:
+        print(flavor_text)
+        effect()
+        player.stamina = player.stamina - cost
+        return True
+    else:
+        print("Not enough stamina!")
+        return False
+
+# This function uses the graceful item effect to reduce stamina costs.
+# Abilities that cost stamina will always have a minimum cost of 1.
+# It takes the base_cost variable from stamina_costs for this operation.
+# We use the .get() function to see if the player has the "graceful"
+# effect and default its value to 0, but if they do have it then it will
+# not be 0.
+def adjusted_stamina_cost(base_cost):
+    graceful_total = player.effects.get("graceful", 0)
+    adjusted_cost = base_cost - graceful_total
+    return max(1, adjusted_cost)
+
+# I am turning the demon mode bonus into a function so we can make it
+# Scale with the player's level throughout the game, making it weaker
+# early but stronger later on.
+# The demon mode bonus is equal to half the player's level, starting at
+# +6 to all stats except endurance, and ending up around +50.
+def demon_bonus_result():
+    return player.level // 2
+
+# Some of these variables need to be reset when the player is defeated
+# and starts over. These are global variables used throughout the game.
+# current_enemy makes it so there is no initial enemy so the game rolls
+# a random one. next_shop and next_overlord count down to the next
+# shop or boss fight. total_battles is basically our counter for how
+# long the game will be. eye_of_omens_counter and demon_counter are
+# set to 0 so the player starts with buffs off.
+# The player's turn is set to True so they'll always go first.
+# Some variables for the final boss fight are also initialized here.
+current_enemy = 0
+next_shop = 9
+next_overlord = 9
+total_battles = 108
+fight_god = total_battles
+eye_of_omens_counter = 0
+demon_counter = 0
+player_turn = True
+god_charged = False
+god_turn_counter = 0
+
+# Game Stage variables record if the game is in its early, mid, or
+# late stages based on how close the fight with god is.
+# The game is 108 battles divided into 4 quarters of 27.
+#Goes from city to dojos to the moon and finally the Dodgeball Dimension.
+game_quarter = total_battles // 4
+early_game_over = game_quarter * 3
+game_midpoint = game_quarter * 2
+starting_late_game = game_quarter
+
+# This function makes messages print more slowly for readability.
+# Text will print 0.5 seconds more slowly.
+# The flush value is to correctly make each slowed line move the 
+# scroll bar down to the bottom because otherwise it just lingers
+# until the program next asks for input, negating any value from
+# this function.
+# Note that this does not actually seem to work on the
+# Khan Academy IDE, but I am leaving the code in just in case
+# anyone wishes to run it elsewhere.
+# For this reason I also changed it to 0.1 seconds instead.
+def slow_print(text, delay=0.1):
+    print(text, flush=True)
+    time.sleep(delay)
+
+# This is where the list of enemy classes starts.
+# Note that we are giving them both minimum and maximum damage values.
+# This is so we can use them as the randint range later.
+# They have semi-randomized money and experience rewards.
+# I have also given each enemy a short message that plays on defeat.
+# As a reminder, a player's starting stats give them 100 AC and
+# +50 on attack rolls.
+
+# This is an agile enemy with 140 AC and +75 on attack rolls.
+class AgileFoe:
+    def __init__(self):
+        self.type = "Agile Foe"
+        self.hp = 15 + random.randint(5,15)
+        self.damage_min = 4
+        self.damage_max = 12
+        self.precision = 15
+        self.agility = 14
+        self.exp_reward = 25 + random.randint(5, 10)
+        self.money_reward = random.randint(15, 25)
+        self.defeat = "'Unforgivably slow...'"
+
+# Function to make the current enemy strong but clumsy.
+# It has 90 AC and +70 on attack rolls but deals more damage
+# and has more health compared to the agile enemy.
+class MightyFoe:
+    def __init__(self):
+        self.type = "Mighty Foe"
+        self.hp = 20 + random.randint(10,25)
+        self.damage_min = 6
+        self.damage_max = 18
+        self.precision = 14
+        self.agility = 9
+        self.exp_reward = 25 + random.randint(5, 10)
+        self.money_reward = random.randint(15, 25)
+        self.defeat = "'Nani?!'"
+
+# Function to generate a more balanced current enemy.
+# It is a sort of middle ground between the previous two.
+# With 130 AC and +80 on attack rolls while also being tough.
+class BalancedFoe:
+    def __init__(self):
+        self.type = "Balanced Enemy"
+        self.hp = 20 + random.randint(5,20)
+        self.damage_min = 6
+        self.damage_max = 15
+        self.precision = 16
+        self.agility = 13
+        self.exp_reward = 25 + random.randint(5, 10)
+        self.money_reward = random.randint(20, 25)
+        self.defeat = "'Augh!!!'"
+
+# Function to generate a weak mook.
+# This is the weakest enemy in the game and not very threatening.
+# Has only 70 AC and +45 on attacks, meaning that even at the start
+# of the game they will be easy to hit and dodge.
+class Weakling:
+    def __init__(self):
+        self.type = "Weakling"
+        self.hp = random.randint(5,15)
+        self.damage_min = 4
+        self.damage_max = 8
+        self.precision = 9
+        self.agility = 7
+        self.exp_reward = 10 + random.randint(5, 10)
+        self.money_reward = random.randint(5, 15)
+        self.defeat = "'Weh!'"
+
+# Function to generate a tough elite enemy.
+# This is the strongest random option in the early enemy table.
+# Has 150 AC (nearly impossible to hit without buffs or Helios Dive
+# before upgrading precision) and +90 on attacks, meaning it
+# will almost always hit the player with 10 agility.
+# A starting player may need to use a sardine and go all out with
+# Eye of Omens, Demon Mode, and/or Helios Dive to win.
+class Elite:
+    def __init__(self):
+        self.type = "Elite"
+        self.hp = 45 + random.randint(10,20)
+        self.damage_min = 12
+        self.damage_max = 24
+        self.precision = 18
+        self.agility = 15
+        self.exp_reward = 50
+        self.money_reward = random.randint(30, 50)
+        self.defeat = "'No! It can't be!'"
+
+# Function to make stats for a Dodgeball Overlord.
+# This is a sort of mini-boss that appears periodically and
+# drops spellcards. Replaced by a stronger variant past mid-game.
+# It has 180 AC and +110 to attack rolls, making it very deadly
+# early on.
+class Overlord:
+    def __init__(self):
+        self.type = "Dodgeball Overlord"
+        self.hp = 100
+        self.damage_min = 15
+        self.damage_max = 30
+        self.precision = 22
+        self.agility = 18
+        self.exp_reward = 100
+        self.money_reward = 80
+        self.defeat = "'How is this possible?!'"
+
+# Tier 2 enemy sheets. These ones show up only on the second
+# enemy table.
+
+# Catgirls are agile but also tougher than most previous foes.
+# With 180 AC and +115 on attacks they are comparable to overlords.
+# But deal less damage and have less health.
+class Catgirl:
+    def __init__(self):
+        self.type = "Catgirl"
+        self.hp = 50 + random.randint(20,35)
+        self.damage_min = 10
+        self.damage_max = 20
+        self.precision = 23
+        self.agility = 18
+        self.exp_reward = 45 + random.randint(5, 10)
+        self.money_reward = random.randint(25, 50)
+        self.defeat = "'N-nyaaa...'"
+
+# Psychics are more frail than catgirls but their powers let them
+# control the ball in ways that make them hard to hit and dodge
+# compared to tier 1 enemies.
+# They have 170 AC and +125 on attacks but don't hit too hard.
+class Psychic:
+    def __init__(self):
+        self.type = "Psychic"
+        self.hp = 30 + random.randint(10,20)
+        self.damage_min = 10
+        self.damage_max = 16
+        self.precision = 25
+        self.agility = 17
+        self.exp_reward = 45 + random.randint(5, 10)
+        self.money_reward = random.randint(30, 50)
+        self.defeat = "'I have foreseen your every move... and concluded I can't win! See ya!'"
+
+# Musha are armored warriors with good stats all around.
+# 190 AC and +150 on attacks.
+class Musha:
+    def __init__(self):
+        self.type = "Musha"
+        self.hp = 85 + random.randint(15,100)
+        self.damage_min = 20
+        self.damage_max = 30
+        self.precision = 30
+        self.agility = 19
+        self.exp_reward = 75 + random.randint(15, 25)
+        self.money_reward = random.randint(25, 60)
+        self.defeat = "'It was you!!!'"
+
+# Abominations have very wide HP and damage ranges, meaning
+# they are unpredictable but potentially run-ending threats.
+# Must be taken seriously if encountered early.
+# 210 AC and +200 on attack rolls means they will hit consistently
+# until the player has at least 20 agility.
+class Abomination:
+    def __init__(self):
+        self.type = "Abomination"
+        self.hp = 100 + random.randint(100,350)
+        self.damage_min = 15
+        self.damage_max = 55
+        self.precision = 40
+        self.agility = 21
+        self.exp_reward = 80 + random.randint(15, 20)
+        self.money_reward = random.randint(60, 85)
+        self.defeat = "'...'"
+
+# Dragons don't start appearing until halfway through the game.
+# They are always very durable and have 260 AC and +250 on attacks.
+class Dragon:
+    def __init__(self):
+        self.type = "Dragon"
+        self.hp = 500
+        self.damage_min = 30
+        self.damage_max = 50
+        self.precision = 50
+        self.agility = 26
+        self.exp_reward = 100
+        self.money_reward = random.randint(60, 95)
+        self.defeat = "'A mere human cannot surpass me! I am perfection! Who are you?!'"
+
+# Kaiju are endgame enemies with 300 AC and +300 on attacks,
+# a huge step up from even dragons.
+class Kaiju:
+    def __init__(self):
+        self.type = "Kaiju"
+        self.hp = 1200
+        self.damage_min = 50
+        self.damage_max = 75
+        self.precision = 60
+        self.agility = 30
+        self.exp_reward = 100
+        self.money_reward = random.randint(75, 100)
+        self.defeat = "'SKREOOONK'"
+
+# Upgraded overlord that starts appearing starting in the mid-game.
+# With 350 AC and +325 on attacks they are in some ways stronger than
+# kaijus, in ways that can more than make up for thier lower damage
+# and health. They may be the strongest non-unique enemies in the game.
+class BadassOverlord:
+    def __init__(self):
+        self.type = "Badass Freakin' Overlord"
+        self.hp = 1000
+        self.damage_min = 50
+        self.damage_max = 60
+        self.precision = 65
+        self.agility = 35
+        self.exp_reward = 100
+        self.money_reward = 100
+        self.defeat = "'I found a worthy opponent right at the end... I can move on with a smile.'"
+
+# Function to create the Dodgeball God. This is a final boss
+# that has a couple of additional values for its shield and
+# phase 2 activation.
+# Additionally with 350 AC the player will reach 100% chance
+# to hit it with 70 precision but less than that would be
+# a struggle. It also has +500 on attack rolls, meaning 60
+# agility is needed to ensure it won't hit, and even then
+# it grows stronger periodically and when going under 50%
+# HP, so high agility is only a temporary shield.
+class God:
+    def __init__(self):
+        self.type = "Dodgeball God"
+        self.hp = 10000
+        self.max_hp = 10000
+        self.damage_min = 60
+        self.damage_max = 120
+        self.precision = 100
+        self.agility = 35
+        self.shield_active = False
+        self.phase_2 = False
+        self.defeat = "'Is this... what you wanted...?'"
+
+# Function to take player input when making decisions.
+def player_options():
+    # The options variable is a dictionary keying numbers to the options
+    # available in a fight.
+    options = {
+        "1": f"Basic Shot ({stamina_costs('1')}). A simple throw.",
+        "2": f"Meteor Shot ({stamina_costs('2')}). Jump and throw from above!",
+        "3": f"Eye of Omens ({stamina_costs('3')}). Use your cursed eye to predict enemy movements!",
+        "4": f"Helios Dive ({stamina_costs('4')}). Unleash the power of the sun!",
+        "5": "Demonic Art ~ Transcend Reason (1 Soul). Have faith in your evil.",
+        "6": "Rest. Catch your breath and recover extra stamina.",
+        "7": f"Eat sardines to recover your energy and maintain your physical form. You have {player.sardine_inventory}.",
+        "8": f"Use a spellcard ({player.spellcard_inventory} available). 1 round of invulnerability plus deal guaranteed damage.",
+        "9": "View your attributes."
+        }
+    # The dictionary is unpacked. The options are printed in full.
+    for num, text in options.items():
+        print(f"{num}) {text}")
+    # Until the player picks a valid option, this loop keeps them available.
+    # The chosen variable compares player input to the list of keys.
+    while True:
+        chosen = input("""Choose a move! """)
+        if chosen in options:
+            return chosen
+        else:
+            slow_print("Your options range between 1 and 9!")
+
+# Function that is called when the player levels up.
+# They can choose one of their attributes to increase by 2.
+# It uses the same kind of options display logic as the previous
+# function but rather than executing effects the chosen option
+# instead increases a player stat.
+def level_up():
+    options = {
+        "1": "Strength. Throw harder!",
+        "2": "Precision. Hit more, crit more!",
+        "3": "Agility. Avoid damage!",
+        "4": "Endurance. More health and stamina!"
+        }
+    for num, text in options.items():
+        print(f"{num}) {text}")
+    while True:
+        level_up_increase = input("Increase a score by 2!")
+        if level_up_increase in options:
+            if level_up_increase == "1":
+                player.strength = player.strength + 2
+            elif level_up_increase == "2":
+                player.precision = player.precision + 2
+            elif level_up_increase == "3":
+                player.agility = player.agility + 2
+            elif level_up_increase == "4":
+                player.endurance = player.endurance + 2
+            break
+        else:
+            slow_print("Your options range between 1 and 4!")
+            
+# Function that creates an enemy of a random type.
+# It rolls a random number between 0 and 100 and
+# uses if/elif branches to divide the options into
+# ranges kind of like a TTRPG random encounter table.
+def create_random_enemy():
+    enemy_roll = random.randint(0,100)
+    if enemy_roll <= 25:
+        new_enemy = AgileFoe()
+    elif enemy_roll <= 50:
+        new_enemy = MightyFoe()
+    elif enemy_roll <= 75:
+        new_enemy = BalancedFoe()
+    elif enemy_roll <= 95:
+        new_enemy = Weakling()
+    elif enemy_roll <= 100:
+        new_enemy = Elite()
+    slow_print("\nA new adversary approaches!")
+    # We return the result of the roll.
+    return new_enemy
+
+# We make a very similar function that will be used to roll mid and
+# late-game enemies once the next_god counter puts the player out of
+# the early game. This other function will roll different ranges
+# depending on the stage of the game.
+def create_greater_enemy():
+    if fight_god > game_midpoint:
+        enemy_roll = random.randint(0, 100)
+    elif fight_god > starting_late_game:
+        enemy_roll = random.randint(25, 125)
+    else:
+        enemy_roll = random.randint(50, 150)
+
+    if enemy_roll <= 10:
+        new_enemy = Elite()
+    elif enemy_roll <= 30:
+        new_enemy = Catgirl()
+    elif enemy_roll <= 50:
+        new_enemy = Psychic()
+    elif enemy_roll <= 80:
+        new_enemy = Musha()
+    elif enemy_roll <= 100:
+        new_enemy = Abomination()
+    elif enemy_roll <= 125:
+        new_enemy = Dragon()
+    elif enemy_roll <= 150:
+        new_enemy = Kaiju()
+    slow_print("\nA new adversary approaches!")
+    return new_enemy
+
+# These functions just make overlord enemies and the final boss.
+# These are not in the random tables so instead they are used
+# after enough battles have happened.
+def create_overlord():
+    new_overlord = Overlord()
+    return new_overlord
+
+def create_greater_overlord():
+    new_overlord = BadassOverlord()
+    return new_overlord
+
+def create_god():
+    dodgeball_god = God()
+    return dodgeball_god
+    
+# Simple function that displays enemy type and HP.
+def enemy_stats_display():
+    print(f"\nCurrent Enemy: {current_enemy.type} | Enemy HP: {current_enemy.hp}")
+
+# Functions that calculate damage for normal hits, critical hits, and grazes.
+# Critical hits do double damage, grazes deal half damage.
+def damage_calc(attack_type, player, current_enemy):
+    # Attack type can multiply damage.
+    multiplier = attack_multipliers[attack_type]
+    # Damage takes both strength and level into account.
+    # So even players with low strength will have a slightly higher max hit
+    # as they level up.
+    total_damage = (player.strength + random.randint(1,player.level)) * multiplier
+    # Total Damage is affected by the Heroic Resolve item effect now.
+    heroic_multiplier = heroic_resolve_calculator(player)
+    total_damage = total_damage * heroic_multiplier
+    # Total damage is rounded before it is applied to prevent floats.
+    total_damage = round(total_damage)
+    
+    # This is also where we now check if the dodgeball god's shield is active.
+    # if so, the player's damage is reflected onto them on all three hit tiers.
+    if getattr(current_enemy, "shield_active", False):
+        reflected_damage = total_damage
+        player.hp = player.hp - reflected_damage
+        print(f"The Dodgeball God's shield reflects your throw, dealing {reflected_damage} damage back at you!")
+        return 0
+
+    # If there is no shield, total damage is deducted from enemy HP and
+    # on-hit effects like lifedrain are applied.
+    # We return the damage for display.
+    else:
+        current_enemy.hp = current_enemy.hp - total_damage
+        effects_on_hit(player, current_enemy, total_damage, attack_type, is_critical=False)
+        return total_damage
+
+# This is the same calculation, but for critical hits, meaning
+# damage is doubled. Due to the way attack multiplies work
+# Special attacks can be multiplied even more than that.
+def crit_calc(attack_type, player, current_enemy):
+    multiplier = attack_multipliers[attack_type]
+    total_damage = ((player.strength + random.randint(1,player.level)) * 2) * multiplier
+    heroic_multiplier = heroic_resolve_calculator(player)
+    total_damage = total_damage * heroic_multiplier
+    total_damage = round(total_damage)
+
+    if getattr(current_enemy, "shield_active", False):
+        reflected_damage = total_damage
+        player.hp = player.hp - reflected_damage
+        print(f"The Dodgeball God's shield reflects your throw, dealing {reflected_damage} damage back at you!")
+        return 0
+
+    else:
+        current_enemy.hp = current_enemy.hp - total_damage
+        # Note that unlike in the previous branches, is_critical is True in
+        # this function. This enables Obliterate to trigger.
+        effects_on_hit(player, current_enemy, total_damage, attack_type, is_critical=True)
+        return total_damage
+
+# Graze is the same but damage is halved.
+# Grazes do not apply on-hit effects either.
+def graze_calc(attack_type, player, current_enemy):
+    multiplier = attack_multipliers[attack_type]
+    total_damage = ((player.strength + random.randint(1,player.level)) // 2) * multiplier
+    heroic_multiplier = heroic_resolve_calculator(player)
+    total_damage = total_damage * heroic_multiplier
+    total_damage = round(total_damage)
+
+    if getattr(current_enemy, "shield_active", False):
+        reflected_damage = total_damage
+        player.hp = player.hp - reflected_damage
+        print(f"The Dodgeball God's shield reflects your throw, dealing {reflected_damage} damage back at you!")
+        return 0
+
+    else:
+        current_enemy.hp = current_enemy.hp - total_damage
+        return total_damage
+
+# Function to calculate if an attack hits, crits, grazes, or misses.
+# The player hits if their attack roll exceeds enemy AC by 30.
+# And grazes if they fail to hit the AC by less than 30.
+# With the starting precision value of 10 and no boosts, a player would have to
+# roll 50 or higher to hit a hypothetical enemy with 10 agility.
+# If the enemy has 15 agility this required roll would change to 100.
+# Each point of precision translates to a 5% chance to upgrade an attack to
+# the next tier of hit.
+def hit_calc(attack_type, player, current_enemy):
+    # The Eye of Omens grants a considerable flat boost to attack rolls
+    # if active, equivalent to about 8 precision points.
+    eye_of_omens_bonus = 0
+    if eye_of_omens_counter > 0:
+        eye_of_omens_bonus = 40
+    attack_roll = (player.precision * 5) + random.randint(0,100) + eye_of_omens_bonus
+    # The Helios Dive attack has +25 on attack rolls also.
+    # Equivalent to 5 precision points.
+    if attack_type == "Helios":
+        attack_roll = attack_roll + 25
+        
+    armor_class = (current_enemy.agility * 10)
+    hit_result = "miss"
+
+    print(f"\nYour Attack Roll = {attack_roll}. Enemy Armor Class = {armor_class}.")
+    
+    if attack_roll >= 30 + armor_class:
+        hit_result = "crit"
+    elif attack_roll >= armor_class:
+        hit_result = "hit"
+    elif attack_roll >= armor_class - 30:
+        hit_result = "graze"
+    else:
+        hit_result = "miss"
+
+    # This calculator was later rewritten to accommodate the Accurate item effect.
+    # The player's total Accurate effect is grabbed and the game uses a d100 
+    # to potentially upgrade miss and graze results to the next tier of hit.
+    # Meaning that Accurate can be a crutch for low-precision runs but
+    # is pretty useless if you can reliably crit everything.
+    accurate_total = player.effects.get("accurate", 0)
+    if accurate_total > 0:
+        if hit_result == "miss":
+            if random.randint(0, 100) <= accurate_total:
+                hit_result = "graze"
+                print("Your accuracy turns a miss into a graze!")
+        elif hit_result == "graze":
+            # Half the chance to upgrade a graze to a hit
+            if random.randint(0, 100) <= (accurate_total // 2):
+                hit_result = "hit"
+                print("Your accuracy upgrades your graze into a hit!")
+
+    # Depending on how the player's attack roll went the function
+    # determines which damage calculator to use and collects their
+    # output for display.
+    # Note that meteor strikes have a chance to stun the enemy
+    # and this chance increases for critical hits.
+    if hit_result == "crit":
+        damage_report = crit_calc(attack_type, player, current_enemy)
+        slow_print(f"Critical Hit! You hit for {damage_report}!")
+        if attack_type == "Meteor":
+            stun_check(current_enemy, chance=33)
+    elif hit_result == "hit":
+        damage_report = damage_calc(attack_type, player, current_enemy)
+        slow_print(f"Hit! You hit for {damage_report}!")
+        if attack_type == "Meteor":
+            stun_check(current_enemy, chance=25)
+    elif hit_result == "graze":
+        damage_report = graze_calc(attack_type, player, current_enemy)
+        slow_print(f"Graze! You hit for {damage_report}!")
+
+    # If the player misses, they can get a special message if their
+    # enemy was a kaiju. After all, how do you miss such a large
+    # target?
+    elif hit_result == "miss":
+        if current_enemy.type == "Kaiju":
+            print("Your throw was too weak to harm the kaiju!")
+        else:
+            slow_print("Miss!")
+
+# We add some functions for other special effects from items.
+# We start with a function that will handle effects that apply
+# after an enemy takes damage.
+def effects_on_hit(player, current_enemy, total_damage, attack_type, is_critical=False):
+    lifesteal_total = player.effects.get("lifesteal", 0)
+    echo_hit_total = player.effects.get("echo hit", 0)
+    obliterate_total = player.effects.get("obliterate", 0)
+
+        # Lifesteal heals the player for a percentage of the damage taken.
+    # So the function adds the total potency from the player's items together.
+    # Then if the player has any lifesteal it calculates the amount of hp healed.
+    # by first dividing the lifesteal total by 100 and multiplying the damage
+    # dealt by the result. There is anti-overheal protection here too.
+    if lifesteal_total > 0:
+        heal_amount = int(total_damage * (lifesteal_total / 100))
+        player.hp = min((player.hp + heal_amount), player.max_hp())
+        print(f"You drain health from the enemy and healed for {heal_amount} hp!")
+
+    # Echo hits roll additional attacks on hit if the player succeeds at a % roll.
+    # It is possible to chain echo hits.
+    if echo_hit_total > 0:
+        if random.randint(0,100) <= echo_hit_total:
+            print("You hit again!")
+            echo_hit_damage = damage_calc("Standard", player, current_enemy)
+            print(f"The echo hit deals {echo_hit_damage} additional damage!")
+
+    # Obliterate has a % chance of instantly slaying the enemy. It ends with return
+    # to stop further processes. It only triggers on critical hits, which we now
+    # check for.
+    if is_critical and obliterate_total > 0:
+        if random.randint(0,100) <= obliterate_total:
+            print("OBLITERATED!")
+            current_enemy.hp = 0
+            return
+
+# This is one of the mathier functions, which calculates the bonus damage
+# from Heroic Resolve. While the player has Heroic Resolve among their item
+# effects they deal more damage as their HP is lower, up to a maximum of
+# around double damage with all relevant items equipped.
+# The formula is similar to the one for the iconic OSRS Dharok set, but
+# modified for a game where HP can go well above 99.
+def heroic_resolve_calculator(player):
+    resolve_total = player.effects.get("heroic resolve", 0)
+    max_hp = player.max_hp()
+    missing_percentage = (max_hp - player.hp) / max_hp
+    heroic_bonus = 1 + missing_percentage * (resolve_total / 100)
+    return heroic_bonus
+
+# This one applies effects when the player is hit. Note we grab
+# damage_report in the arguments to use for retribution.
+def effects_on_damage_taken(player, current_enemy, damage_report):
+    retribution = player.effects.get("retribution", 0)
+    resilient = player.effects.get("resilient", 0)
+
+    # The retribution effect deals a percentage of damage taken
+    # back to attackers.
+    if retribution > 0:
+        ret_damage = int(damage_report * (retribution / 100))
+        current_enemy.hp = current_enemy.hp - ret_damage
+        print(f"The enemy takes {ret_damage} damage from Retribution!")
+
+    # Resilient gives the player a chance to survive lethal damage
+    # with 1 HP remaining.
+    if resilient > 0:
+        if player.hp - damage_report <= 0:
+            if random.randint(0,100) <= resilient:
+                player.hp = 1
+                print("You are still standing!")
+
+# These functions mirror the player calculation ones, but roll enemy damage.
+# They use the minimum and maximum damage variables stored in the enemy classes
+# as the arguments in randint, giving each enemy a custom damage range.
+def enemy_damage_calc(player, current_enemy):
+    total_damage = random.randint(current_enemy.damage_min, current_enemy.damage_max)
+    player.hp = player.hp - total_damage
+    return total_damage
+
+def enemy_graze_calc(player, current_enemy):
+    total_damage = (random.randint(current_enemy.damage_min, current_enemy.damage_max) // 2)
+    player.hp = player.hp - total_damage
+    return total_damage
+
+# This small function rolls a stun chance percentage used by hit_calc()
+# to give Meteor Shot a chance to stun enemies it successfully hits.
+# Their stun status is then checked 
+# The default stun chance is 25% but crits are given an argument
+# boosting that to 33%.
+def stun_check(current_enemy, chance=25):
+    if random.randint(1, 100) <= chance:
+        current_enemy.stunned = True
+        slow_print(f"{current_enemy.type} is stunned by the attack!")
+        
+# Function to calculate if the player is hit.
+# It works the same for enemies as it does for players.
+# Except the Eye of Omens bonus also applies defensively here and
+# The enemies are unable to score critical hits.
+def dodge_calc(player, current_enemy):
+    attack_roll = (current_enemy.precision * 5) + random.randint(0,100)
+    eye_of_omens_bonus = 0
+    
+    if eye_of_omens_counter > 0:
+        eye_of_omens_bonus = 40
+        
+    armor_class = (player.agility * 10) + eye_of_omens_bonus
+
+    print(f"\nThe enemy's Attack Roll = {attack_roll}. Your Armor Class = {armor_class}.")
+
+    # If the player has used a spellcard to gain invulnerability
+    # that is checked first and damage is not rolled even on a hit.
+    if player.invulnerable is True:
+        print("The spellcard negates all damage!")
+    elif attack_roll >= armor_class:
+        damage_report = enemy_damage_calc(player, current_enemy)
+        slow_print(f"The dodgeball hits you! You take {damage_report} damage!")
+        effects_on_damage_taken(player, current_enemy, damage_report)
+    elif attack_roll >= armor_class - 30:
+        damage_report = enemy_graze_calc(player, current_enemy)
+        slow_print(f"The dodgeball grazes you! You take {damage_report} damage!")
+        effects_on_damage_taken(player, current_enemy, damage_report)
+    else:
+        slow_print("You catch the dodgeball!")
+
+# Item Pool Dictionary.
+# This dictionary stores values that are themselves dictionaries.
+# The simpler ones follow the format:
+# str:"Item Name": { "boosts": [{"stat": "stat_name", "amount": int}], "rarity": "rarity_tier"
+# By using "boosts" like this we can assign multiple different {stat/amount} values within
+# the square brackets and create items that boost multiple stats.
+# We are doing it like this so we can uset setattr() and getattr()
+# In addition to "boosts" and "rarity" we also have "special" to record a special
+# effect the item has beyond just increasing stats.
+
+item_pool = {
+# Common Items. Current count: 21
+    "Fingerless Gloves": {
+        "boosts": [
+            {"stat":"strength", "amount": 4,}],
+        "rarity": "common"},
+    
+    "Black Eyepatch": {
+        "boosts": [
+            {"stat": "precision", "amount": 4}], 
+        "rarity": "common"},
+    
+    "Heroic Red Scarf": {
+        "boosts": [
+            {"stat": "agility", "amount": 2}], 
+        "special": {"name": "heroic resolve", "potency": 10},
+        "rarity": "common"},
+
+    "Princely Cape": {
+        "boosts": [
+            {"stat": "precision", "amount": 2}], 
+        "special": {"name": "heroic resolve", "potency": 10},
+        "rarity": "common"},
+    
+    "Tough Tank Top": {
+        "boosts": [
+            {"stat": "endurance", "amount": 4}], 
+        "rarity": "common"},
+    
+    "Mysterious Face Mask": {
+        "boosts": [
+            {"stat": "agility", "amount": 1},
+            {"stat": "endurance", "amount": 1}], 
+        "special": {"name": "crow", "potency": 5},
+        "rarity": "common"},
+
+    "Cute Glasses": {
+        "boosts": [
+            {"stat": "precision", "amount": 2}],
+        "special": {"name": "accurate", "potency": 5},
+        "rarity": "common"},
+
+    "Sporty Shorts": {
+        "boosts": [
+            {"stat": "strength", "amount": 2},
+            {"stat": "endurance", "amount": 2}], 
+        "rarity": "common"},
+
+    "Fursona": {
+        "boosts": [
+            {"stat": "strength", "amount": 1},
+            {"stat": "precision", "amount": 1},
+            {"stat": "agility", "amount": 1},
+            {"stat": "endurance", "amount": 1}], 
+        "rarity": "common"},
+
+    "Cool Bandana": {
+        "boosts": [
+            {"stat": "strength", "amount": 1}],
+        "special": {"name": "echo hit", "potency": 5}, 
+        "rarity": "common"},
+
+    "Running Shoes": {
+        "boosts": [
+            {"stat": "agility", "amount": 1}], 
+        "special": {"name": "graceful", "potency": 2},
+        "rarity": "common"},
+
+    "Curl Cream": {
+        "boosts": [
+            {"stat": "precision", "amount": 1},
+            {"stat": "agility", "amount": 1},
+            {"stat": "endurance", "amount": 2}],
+        "rarity": "common"},
+
+    "Crab Claw": {
+        "boosts": [
+            {"stat": "strength", "amount": 1},
+            {"stat": "endurance", "amount": 3}],
+        "rarity": "common"},
+
+    "Cute Mandibles": {
+        "boosts": [
+            {"stat": "strength", "amount": 3},
+            {"stat": "precision", "amount": 1}],
+        "rarity": "common"},
+
+    "Tentacle": {
+        "boosts": [
+            {"stat": "strength", "amount": 1},
+            {"stat": "precision", "amount": 3}],
+        "rarity": "common"},
+
+    "Bat Familiar": {
+        "boosts": [
+            {"stat": "precision", "amount": 1}], 
+        "special": {"name": "lifesteal", "potency": 5},
+        "rarity": "common"},
+
+    "Crow Familiar": {
+        "boosts": [
+            {"stat": "precision", "amount": 2}], 
+        "special": {"name": "crow", "potency": 5},
+        "rarity": "common"},
+
+    "Hedgehog Buddy": {
+        "boosts": [
+            {"stat": "endurance", "amount": 1}], 
+        "special": {"name": "retribution", "potency": 10},
+        "rarity": "common"},
+
+    "Shielding Parasol": {
+        "boosts": [
+            {"stat": "endurance", "amount": 1}], 
+        "special": {"name": "resilient", "potency": 3},
+        "rarity": "common"},
+
+    "Physical Full Burst": {
+        "boosts": [
+            {"stat": "agility", "amount": 1}], 
+        "special": {"name": "time control", "potency": 1},
+        "rarity": "common"},
+
+    "Autism Diagnosis": {
+        "boosts": [
+            {"stat": "precision", "amount": 1}],
+        "special": {"name": "echo hit", "potency": 3},
+        "rarity": "common"},
+
+# Uncommon Items. Current count: 22
+    "Dog Paw Gloves": {
+        "boosts": [
+            {"stat": "strength", "amount": 4},
+            {"stat": "agility", "amount": 4}],
+        "rarity": "uncommon"},
+
+    "T-34 Tank": {
+        "boosts": [
+            {"stat": "strength", "amount": 4},
+            {"stat": "endurance", "amount": 4}],
+        "rarity": "uncommon"},
+
+    "Amulet of Fury": {
+        "boosts": [
+            {"stat": "strength", "amount": 3},
+            {"stat": "precision", "amount": 3},
+            {"stat": "endurance", "amount": 2}],
+        "rarity": "uncommon"},
+
+    "Cloak of Shadows": {
+        "boosts": [
+            {"stat": "agility", "amount": 4},
+            {"stat": "endurance", "amount": 2}],
+        "special": {"name": "crow", "potency": 5},
+        "rarity": "uncommon"},
+
+    "Tornado Hand": {
+        "boosts": [
+            {"stat": "strength", "amount": 4},
+            {"stat": "precision", "amount": 4}], 
+        "rarity": "uncommon"},
+
+    "Valkyrie Helm": {
+        "boosts": [
+            {"stat": "strength", "amount": 8}],
+        "rarity": "uncommon"},
+
+    "Cat Eyes": {
+        "boosts": [
+            {"stat": "precision", "amount": 4}],
+        "special": {"name": "accurate", "potency": 10},
+        "rarity": "uncommon"},
+
+    "Rabbit Ears of Agility": {
+        "boosts": [
+            {"stat": "agility", "amount": 8}],
+        "rarity": "uncommon"},
+
+    "Graceful Outfit": {
+        "boosts": [
+            {"stat": "agility", "amount": 4}],
+        "special": {"name": "graceful", "potency": 4},
+        "rarity": "uncommon"},
+    
+    "Rune Platebody": {
+        "boosts": [
+            {"stat": "endurance", "amount": 8}],
+        "rarity": "uncommon"},
+
+    "Estus Flask": {
+        "boosts": [
+            {"stat": "agility", "amount": 2},
+            {"stat": "endurance", "amount": 6}],
+        "rarity": "uncommon"},
+
+    "Vampire Fang": {
+        "boosts": [
+            {"stat": "strength", "amount": 3}],
+        "special": {"name": "lifesteal", "potency": 10},
+        "rarity": "uncommon"},
+
+    "Bulwark of Thorns": {
+        "boosts": [
+            {"stat": "endurance", "amount": 3}],
+        "special": {"name": "retribution", "potency": 25},
+        "rarity": "uncommon"},
+
+    "Void Wing Nouliths": {
+        "boosts": [
+            {"stat": "precision", "amount": 5}],
+        "special": {"name": "echo hit", "potency": 5},
+        "rarity": "uncommon"},
+
+    "Cursed War Dolls": {
+        "boosts": [
+            {"stat": "precision", "amount": 3}],
+        "special": {"name": "echo hit", "potency": 10},
+        "rarity": "uncommon"},
+
+    "Dark Aura": {
+        "boosts": [
+            {"stat": "strength", "amount": 3},
+            {"stat": "agility", "amount": 2},
+            {"stat": "endurance", "amount": 3}],
+        "rarity": "uncommon"},
+
+    "Badass Scythe": {
+        "special": {"name": "obliterate", "potency": 4},
+        "rarity": "uncommon"},
+
+    "Yokai Dowsing Rod": {
+        "special": {"name": "crow", "potency": 20},
+        "rarity": "uncommon"},
+
+    "Mini-Hakkero": {
+        "boosts": [
+            {"stat": "strength", "amount": 4}],
+        "special": {"name": "obliterate", "potency": 2},
+        "rarity": "uncommon"},
+
+    "Occult Medicine Box": {
+        "boosts": [
+            {"stat": "endurance", "amount": 3}], 
+        "special": {"name": "resilient", "potency": 6},
+        "rarity": "uncommon"},
+
+    "Perfect Maid's Pocket Watch": {
+        "boosts": [
+            {"stat": "precision", "amount": 2},
+            {"stat": "agility", "amount": 2}],
+        "special": {"name": "time control", "potency": 2},
+        "rarity": "uncommon"},
+
+    "Dharok's Armor": {
+        "boosts": [
+            {"stat": "strength", "amount": 2},
+            {"stat": "endurance", "amount": 2}],
+        "special": {"name": "heroic resolve", "potency": 30},
+        "rarity": "uncommon"},
+
+# Rare Items. Current count: 17
+    "Cursed Armor: Muramasa": {
+        "boosts": [
+            {"stat": "strength", "amount": 8},
+            {"stat": "precision", "amount": 4},
+            {"stat": "agility", "amount": 4},
+            {"stat": "endurance", "amount": 8}],
+        "rarity": "rare"},
+
+    "Blessed Armor: Masamune": {
+        "boosts": [
+            {"stat": "strength", "amount": 4},
+            {"stat": "precision", "amount": 2},
+            {"stat": "agility", "amount": 4},
+            {"stat": "endurance", "amount": 6}],
+        "special": {"name": "heroic resolve", "potency": 50},
+        "rarity": "rare"},
+
+    "Devourlord's Arm": {
+        "boosts": [
+            {"stat": "strength", "amount": 10}],
+        "special": {"name": "lifesteal", "potency": 25},
+        "rarity": "rare"},
+
+    "Gate of Babylon": {
+        "boosts": [
+            {"stat": "strength", "amount": 5}],
+        "special": {"name": "echo hit", "potency": 25},
+        "rarity": "rare"},
+
+    "Fragarach: The Answerer": {
+        "boosts": [
+            {"stat": "strength", "amount": 10}],
+        "special": {"name": "retribution", "potency": 100},
+        "rarity": "rare"},
+
+    "Overlord Cape": {
+        "boosts": [
+            {"stat": "strength", "amount": 4},
+            {"stat": "precision", "amount": 8},
+            {"stat": "agility", "amount": 8},
+            {"stat": "endurance", "amount": 4}],
+        "rarity": "rare"},
+
+    "Moonlight Greatsword": {
+        "boosts": [
+            {"stat": "strength", "amount": 10},
+            {"stat": "precision", "amount": 4}],
+        "rarity": "rare"},
+
+    "Legendary Ninja Uniform": {
+        "boosts": [
+            {"stat": "precision", "amount": 6},
+            {"stat": "agility", "amount": 8}],
+        "special": {"name": "crow", "potency": 15},
+        "rarity": "rare"},
+
+    "Sealed Arm of the Fallen Hero": {
+        "boosts": [
+            {"stat": "strength", "amount": 6},
+            {"stat": "precision", "amount": 6},
+            {"stat": "agility", "amount": 6},
+            {"stat": "endurance", "amount": 6}],
+        "rarity": "rare"},
+
+    "Mystic Eyes of Death Perception": {
+        "boosts": [
+            {"stat": "precision", "amount": 10}],
+        "special": {"name": "obliterate", "potency": 10},
+        "rarity": "rare"},
+
+    "Brahmashirastra": {
+        "boosts": [
+            {"stat": "strength", "amount": 10}],
+        "special": {"name": "obliterate", "potency": 10},
+        "rarity": "rare"},
+
+    "Corrupted Shark": {
+        "boosts": [
+            {"stat": "endurance", "amount": 10}],
+        "special": {"name": "hungry beast", "potency": 1},
+        "rarity": "rare"},
+
+    "Skull of Mondain": {
+        "boosts": [
+            {"stat": "strength", "amount": 14}],
+        "rarity": "rare"},
+
+    "Amulet of Bloodfury": {
+        "boosts": [
+            {"stat": "strength", "amount": 3},
+            {"stat": "precision", "amount": 3},
+            {"stat": "endurance", "amount": 3}],
+        "special": {"name": "lifesteal", "potency": 15},
+        "rarity": "rare"},
+
+    "Hourai Elixir": {
+        "boosts": [
+            {"stat": "endurance", "amount": 10}], 
+        "special": {"name": "resilient", "potency": 12},
+        "rarity": "rare"},
+
+    "Chrono Trigger": {
+        "boosts": [
+            {"stat": "endurance", "amount": 5}], 
+        "special": {"name": "time control", "potency": 3},
+        "rarity": "rare"},
+
+    "Nemesis Eye": {
+        "boosts": [
+            {"stat": "precision", "amount": 5}], 
+        "special": {"name": "accurate", "potency": 20},
+        "rarity": "rare"},
+}
+
+# The item's price is based on its rarity. These values are stored below.
+rarity_prices = {
+    "common": 100,
+    "uncommon": 150,
+    "rare": 200
+}
+
+# A list of item special effects that are percentage-based.
+# We are making a record of these because in some displays
+# we want to display a % sign after the item's potency.
+# But only if it is a percentage effect rather than a
+# flat value like the Graceful effect.
+percentage_effects = [
+    "lifesteal",
+    "retribution",
+    "echo hit",
+    "obliterate",
+    "resilient",
+    "heroic resolve",
+    "accurate",
+    "crow"
+]
+
+
+# The fourth and fifth lines grab the stat's name (capitalized) and the boost amount.
+# Then there is an if/else loop. If the item provides a bonus it will be added to the
+# empty list as a string made up of the name and value, with a + sign.
+# The else: branch is mostly meant for future-proofing in case I want to add items that
+# reduce a stat in favor of another in the future, or modify existing items to do that.
+#After that we add another if statement that will check for fancier effects later
+# versions of the program hope to implement.
+# The final line uses .join() to combine the strings in the effects list into one, 
+# separated by commas.
+# This function is used to display the effects of items in the shop.
+def item_effects_display (item_name):
+    
+    # The first lines within the function grabs an item's data 
+    # from the item_pool dictionary and make an effects list.
+    details = item_pool[item_name]
+    effects = []
+    # The loop populates the effects list with the item's boosts, if any.
+    # It pretty much unpacks them from the item and if it finds boosts
+    # it shows the capitalized stat name and amount.
+    if "boosts" in details:
+        for boost in details["boosts"]:
+            stat_name = boost["stat"].capitalize()
+            amount = boost["amount"]
+            if amount > 0:
+                effects.append(f"{stat_name} +{amount}")
+            else:
+                effects.append(f"{stat_name} {amount}")
+
+    # If the item has special effects it displays that too.
+    # In the same way, but with a % symbol only if the item
+    # is in our list of % effects.
+    if "special" in details:
+        special_name = details["special"]["name"].capitalize()
+        special_potency = details["special"]["potency"]
+        if details["special"]["name"] in percentage_effects:
+            effects.append(f"{special_name} {special_potency}%")
+        else:
+            effects.append(f"{special_name} {special_potency}")
+
+    # We separate the effects with a comma and space.
+    return ", ".join(effects)
+
+# This function collects an item's price based on its rarity.
+# It is given the item_name argument and then it looks up its
+# rarity in the item pool, using that to determine its price.
+def item_price(item_name):
+    return rarity_prices[item_pool[item_name]["rarity"]]
+
+# This is the function that rolls random items on each separate shop visit.
+# Available items are those in the item pool but not in the player's inventory.
+# It runs a for loop for every name in the pool.
+def item_roll():
+    available = [name for name in item_pool if name not in player.owned_items]
+    # There is a bit of protection against rolling less than 3 available items but
+    # I made so many that it is impossible to deplete the list in full playthrough.
+    count = min(3, len(available))
+    return random.sample(available, count)
+    
+# This is the gym function for the shop below.
+# It calculates how much exp the player needs to level up.
+# And if the player has money equal to that amount it purchases the exp
+# at a ratio of $2 per experience point to level up.
+def gym():
+    training_cost = gym_price()
+    exp_to_buy = training_cost // 2
+    if player.money >= training_cost:
+        player.money = player.money - training_cost
+        player.exp = player.exp + exp_to_buy
+        # The flavor text for the gym is randomized.
+        gym_flavor_text = random_gym_text()
+        print(f"\n{gym_flavor_text}")
+        if player.exp >= 100:
+            player.level = player.level + 1
+            player.exp = player.exp - 100
+            full_stats_display()
+            level_up()
+    else:
+        print("You can't afford to go to the gym...")
+
+# Function returns the cost of using the gym.
+def gym_price():
+    gym_price = (100 - player.exp) * 2
+    return gym_price
+
+# Lists and rolls randomized flavor text you can get when going to the gym.
+def random_gym_text():
+    gym_flavors = [
+        "You lift heavy weights and run around for a while!",
+        "You obliterate several target dummies with your throws!",
+        "You do 100 push-ups, 100 sit-ups, 100 squats, and a 10 km run!"
+    ]
+    
+    chosen_text = random.choice(gym_flavors)
+    return chosen_text
+
+# I have moved the application of item effects to the player into its own
+# function to keep the code DRY and neat.
+
+def apply_item_effects(item_name):
+    details = item_pool[item_name]
+
+    # It collects the data from items in the pool and uses
+    # setattr and getattr to update the player's stats by the correct amount.
+    # These functions can be used to neatly update object attributes.
+    # In this case the object argument (player) is updated by the attribute
+    # parameter (item_effect["stat"]) and the amount is obtained through
+    # getattr to get the item's "amount".
+    if "boosts" in details:
+        for item_effect in details["boosts"]:
+            setattr(player, item_effect["stat"], getattr(player, item_effect["stat"]) + item_effect["amount"])
+    # There is also a condition where if the item has special effects,
+    # those will be added to the player's active effects and two effects of
+    # the same type will stack their potency additively.
+    if "special" in details:
+        effect_name = details["special"]["name"]
+        effect_potency = details["special"]["potency"]
+
+        player.effects[effect_name] = player.effects.get(effect_name, 0) + effect_potency
+    player.owned_items.append(item_name)
+
+# Function that creates a shop the player periodically visits.
+# At this shop, the player can buy a meal to fully restore HP and stamina.
+# The player can also find three randomized items. Only one of them
+# can be bought on each shop visit.
+# This function uses getattr and setattr. These help with
+# saving object attributes into strings.
+# For example, setattr(player, "strength", 15) is the same as
+# player.strength = 15. There are cases where this is preferable, such as
+# when an attribute is decided at runtime.
+def shop():
+    available_items = item_roll()
+    # We make it so every shop visit the player enters as not having
+    # already bought an item, enabling them to buy a new one.
+    player_already_bought = False
+
+    # The prices and rarities of the 3 items rolled are collected.
+    # Note that we are using list positions for the items, meaning that
+    # the first item is at position 0.
+    item1_price = item_price(available_items[0])
+    item1_rarity = item_pool[available_items[0]]['rarity']
+    item2_price = item_price(available_items[1])
+    item2_rarity = item_pool[available_items[1]]['rarity']
+    item3_price = item_price(available_items[2])
+    item3_rarity = item_pool[available_items[2]]['rarity']
+
+    # This is the loop where the player can actually interact with the shop.
+    while True:
+        slow_print("\nA strange old man offers you mapo tofu and a relic. You can buy only one of the three.")
+        stats_display()
+        slow_print(f"You currently have ${player.money}")
+        print("-" * 40)
+        gym_price_display = gym_price()
+        
+        options = {
+        "1": f"Buy {available_items[0]} ({item1_rarity}) for ${item1_price}\n ---> {item_effects_display(available_items[0])}",
+        "2": f"Buy {available_items[1]} ({item2_rarity}) for ${item2_price}\n ---> {item_effects_display(available_items[1])}",
+        "3": f"Buy {available_items[2]} ({item3_rarity}) for ${item3_price}\n ---> {item_effects_display(available_items[2])}",
+        "4": "Eat some extra-spicy mapo tofu for $20.",
+        "5": f"Buy a big can of sardines to eat later for $20. You currently have {player.sardine_inventory}.",
+        "6": f"Hit the gym and train. It will cost ${gym_price_display}.",
+        "7": "View your stats.",
+        "8": "Leave the shop."
+        }
+        for num, text in options.items():
+            print(f"{num}) {text}")
+
+        player_buy = input("What will you get? ")
+        
+        if player_buy in options:
+            if player_buy == "1":
+                item_name = available_items[0]
+                # In this function, the details variable pulls up the rolled item's name and
+                # stores it, then if the player can afford the item the details vairable
+                # can be used to draw the stats to be modified and the amount to modify by,
+                # as defined in the earlier item_pool master list.
+                details = item_pool[item_name]
+                if player.money >= item1_price:
+                    # In addition to checking the player can afford the item we also
+                    # confirm that the player has not bought an item yet.
+                    if player_already_bought is False:
+                        player.money = player.money - item1_price
+                        apply_item_effects(item_name)
+                        print(f"You bought {item_name}!")
+                        # After sale, we mark that the player bought an item,
+                        # which blocks the other options for this visit.
+                        player_already_bought = True
+                    else:
+                        print("The strange old man only had one relic for sale. Try again next visit.")
+                else:
+                    print("You can't afford that.")
+                    
+            elif player_buy == "2":
+                item_name = available_items[1]
+                details = item_pool[item_name]
+                if player.money >= item2_price:
+                    if player_already_bought is False:
+                        player.money = player.money - item2_price
+                        apply_item_effects(item_name)
+                        print(f"You bought {item_name}!")
+                        player_already_bought = True
+                    else:
+                        print("The strange old man only had one relic for sale. Try again next visit.")
+                else:
+                    print("You can't afford that.")
+                    
+            elif player_buy == "3":
+                item_name = available_items[2]
+                details = item_pool[item_name]
+                if player.money >= item3_price:
+                     if player_already_bought is False:
+                        player.money = player.money - item3_price
+                        apply_item_effects(item_name)
+                        print(f"You bought {item_name}!")
+                        player_already_bought = True
+                     else:
+                        print("The strange old man only had one relic for sale. Try again next visit.")
+                else:
+                    print("You can't afford that")
+
+            # The remaining options are very simple, restoring the player,
+            # increasing their sardine_inventory attribute, calling the
+            # gym function, or displaying their stats.
+            elif player_buy == "4":
+                if player.money >= 20:
+                    player.money = player.money - 20
+                    slow_print("\nYou greedily devour the mapo tofu! It tastes sinful.")
+                    player.hp = player.max_hp()
+                    player.stamina = player.max_stamina()
+                else:
+                    print("You can't even afford that delicious mapo tofu... your martyrdom is truly endless.")
+                    
+            elif player_buy == "5":
+                if player.money >= 20:
+                    player.money = player.money - 20
+                    player.sardine_inventory = player.sardine_inventory + 1
+                    print(f"\nYou buy some sardines. You now have {player.sardine_inventory}")
+                else:
+                    print("The poor must make do without sardines. How cruel.")
+                    
+            elif player_buy == "6":
+                gym()
+                
+            elif player_buy == "7":
+                full_stats_display()
+
+            # We break the loop only when the player leaves the shop.
+            elif player_buy == "8":
+                slow_print("You leave the tofu shop.")
+                break
+        else:
+            print("Your options range between 1 and 8!")
+            
+# Function to initiate a fight with the enemy that was rolled.
+def fight(player, current_enemy):
+    # It starts by making several needed variables global.
+    global next_overlord
+    global next_shop
+    global fight_god
+
+    # it starts a loop to have both player and enemy stats on display every turn.
+    # The player's turn always happens first.
+    while True:
+        enemy_stats_display()
+        stats_display()
+        global player_turn
+        player.invulnerable = False
+
+        # The loop is set to immediately break if the player hits 0 HP.
+        # If the enemy reaches 0 HP instead the player gets experience,
+        # the overlord counter decreases, and the player potentially levels up.
+        if player.hp < 1:
+            slow_print("You have been defeated!")
+            break
+        elif current_enemy.hp < 1:
+            # If the enemy was god, the game is won.
+            if current_enemy.type == "Dodgeball God":
+                slow_print(current_enemy.defeat)
+                slow_print("The Dodgeball God has fallen...")
+                slow_print("You have created a new age of Dodgeball Demons and are now the supreme overlord!")
+                return "GOD_DEFEATED"
+                
+            slow_print("\n" + current_enemy.defeat)
+            slow_print("Victory!")
+            crow_total = player.effects.get("crow", 0)
+            player.exp = player.exp + current_enemy.exp_reward
+
+            # If the player has the crow effect, rewards are increased
+            # and a sardine may be received as a random drop.
+            if crow_total > 0:
+                base_money_reward = current_enemy.money_reward
+                crow_bonus_money = int(base_money_reward * (crow_total / 100))
+                total_money_reward = base_money_reward + crow_bonus_money
+                player.money = player.money + total_money_reward
+                print(f"You found ${total_money_reward}! Your crow-like nature contributed ${crow_bonus_money}.")
+    
+                if random.randint(0,100) <= (crow_total):
+                    player.sardine_inventory += 1
+                    print(f"Your fellow crows bring you a sardine! You now have {player.sardine_inventory}.")
+            else:
+                player.money = player.money + current_enemy.money_reward
+
+            # If it was an overlord, spellcards are awareded.
+            if current_enemy.type in ["Dodgeball Overlord", "Badass Freakin' Overlord"]:
+                player.spellcard_inventory += 1
+                slow_print(f"You have earned a Spellcard! You now have {player.spellcard_inventory}.")
+            
+            next_overlord = next_overlord - 1
+            next_shop = next_shop - 1
+            fight_god = fight_god - 1
+            slow_print(f"\nThe next Dodgeball Overlord is {next_overlord} battles away!")
+            slow_print(f"The next shop is {next_shop} battles away!")
+            if player.exp >= 100:
+                player.level = player.level + 1
+                player.exp = player.exp - 100
+                full_stats_display()
+                level_up()
+
+            # current_enemy returns to 0, rolling another enemy.
+            current_enemy = 0
+            return current_enemy
+
+        # This loop is active while it is the player's turn.
+        # Their buff counters decrease at the start of the turn if not at 0,
+        # and the player is then free to use their actions.
+        while player_turn and current_enemy.hp > 0:
+            global eye_of_omens_counter
+            global demon_counter
+            print("")
+            player_move = player_options()
+            
+            # Each attack is keyed to a dictionary above that matches its stamina cost and
+            # runs the attack roll through lambda.
+            if player_move == "1":
+                if stamina_checker(player, stamina_costs('1'), "You throw the dodgeball!", lambda: hit_calc("Standard", player, current_enemy)):
+                    player_turn = False
+                    
+            elif player_move == "2":
+                if stamina_checker(player, stamina_costs('2'), "You jump and slam the dodgeball into the enemy!", lambda: hit_calc("Meteor", player, current_enemy)):
+                    player_turn = False
+                    
+            elif player_move == "3":
+                if player.stamina >= stamina_costs('3'):
+                    slow_print("\nYour magical eye grants you precognition!")
+                    base_duration = 3
+                    time_control_bonus = player.effects.get("time control", 0)
+                    total_duration = base_duration + time_control_bonus
+                    eye_of_omens_counter = total_duration
+                    if time_control_bonus > 0:
+                        print("Your mastery over time extends the effect!")
+                    player.stamina = player.stamina - stamina_costs('3')
+                    player_turn = False
+                else:
+                    print("Not enough stamina!")
+                    
+            elif player_move == "4":
+                if stamina_checker(player, stamina_costs('4'), "You throw a ball imbued with the power and malevolence of the sun!", lambda: hit_calc("Helios", player, current_enemy)):
+                    player_turn = False
+
+            # Moves 3 and 5 boost the player's stats temporarily instead, and move 5 is
+            # a free action that does not end the player's turn, but does reduce their
+            # HP to 1. The player can also rest if out of stamina for other actions,
+            # or view their attributes for free.
+            elif player_move == "5":
+                if demon_counter == 0:
+                    player.hp = 1
+                    base_duration = 3
+                    time_control_bonus = player.effects.get("time control", 0)
+                    total_duration = base_duration + time_control_bonus
+                    demon_counter = total_duration
+                    slow_print(f"\nThe darkness takes you! Your enhanced state will last for {demon_counter} turns!")
+                    if time_control_bonus > 0:
+                        print("Your mastery over time extends the effect!")
+                    player.demon_bonus_applied = demon_bonus_result()
+                    player.strength = player.strength + player.demon_bonus_applied
+                    player.precision = player.precision + player.demon_bonus_applied
+                    player.agility = player.agility + player.demon_bonus_applied
+                else:
+                    print("You are already transformed!")
+                    
+            elif player_move == "6":
+                player.stamina = player.stamina + (player.stamina_regen() * 3)
+                player_turn = False
+                
+            elif player_move == "7":
+                if player.sardine_inventory > 0:
+                    player.sardine_inventory = player.sardine_inventory - 1
+                    player.hp = player.max_hp()
+                    player.stamina = player.max_stamina()
+                    slow_print("You eat the sardines. They taste like victory.")
+                    if player.effects.get("hungry beast", 0) == 0:
+                        player_turn = False
+                    elif player.effects.get("hungry beast", 0) > 0:
+                        print("You devour the sardines quickly!")
+                else:
+                    print("You are out of sardines!")
+
+            elif player_move == "8":
+                if player.spellcard_inventory > 0:
+                    player.spellcard_inventory = player.spellcard_inventory - 1
+                    current_enemy.hp = current_enemy.hp - (player.level * 2)
+                    player.invulnerable = True
+                    slow_print("You become invulnerable for a brief time and unleash a powerful attack!")
+                    player_turn = False
+                else:
+                    print("You are out of spellcards!")
+                    
+            elif player_move == "9":
+                full_stats_display()
+
+            # The following code uses min() to regenerate the player's HP and stamina
+            # up to but not exceeding their maximum values. This prevents overheal.
+            # We want this regen to happen after the player's turn but before the enemy
+            # attacks as a mercy to the player.
+            hp_regen_bonus = 0
+            stamina_regen_bonus = 0
+            if demon_counter > 0:
+                hp_regen_bonus = 5
+                stamina_regen_bonus = 10
+            player.hp = min(player.hp + player.hp_regen() + hp_regen_bonus, player.max_hp())
+            player.stamina = min(player.stamina + player.stamina_regen() + stamina_regen_bonus, player.max_stamina())
+
+        # Once the player's turn ends, the enemy performs a simple attack and
+        # The player can move again. If the enemy is stunned
+        # then their turn is skipped, and if they enemy is
+        # god then it uses a different set of actions instead of
+        # only basic attacks.
+        if player_turn is False and current_enemy.hp > 0:
+            if getattr(current_enemy, "stunned", False):
+                print("The enemy is stunned and cannot attack!")
+                current_enemy.stunned = False
+            elif current_enemy.type == "Dodgeball God":
+                god_actions(player, current_enemy)
+            
+            else:
+                slow_print(f"{current_enemy.type} throws a dodgeball at you!")
+                dodge_calc(player, current_enemy)
+            player_turn = True
+
+        # The buff duration decrements were moved here so they'll run
+        # correctly even if the player checks their stats.
+        if eye_of_omens_counter > 0:
+            eye_of_omens_counter = eye_of_omens_counter - 1
+            if eye_of_omens_counter == 0:
+                slow_print("Your precognition ends.")
+        if demon_counter > 0:
+            demon_counter = demon_counter - 1
+            if demon_counter == 0:
+                player.strength = player.strength - player.demon_bonus_applied
+                player.precision = player.precision - player.demon_bonus_applied
+                player.agility = player.agility - player.demon_bonus_applied
+                player.demon_bonus_applied = 0
+                slow_print("The darkness releases you!")
+        print("-" * 40)
+
+# This function handles the Dodgeball God's behavior.
+# This is intended to be a two-phase fight against an opponent who
+# becomes stronger over time and sometimes uses very damaging moves
+# that call for the use of defensive buffs or the coming spellcard item.
+# We use global variables for the boss states so they won't reset on their own.
+def god_actions(player, current_enemy):
+    global god_charged
+    global god_turn_counter
+
+    # The enemy's shield special turns off at the start of its next turn if it was active.
+    current_enemy.shield_active = False
+
+    # The god turn counter increases by 1 each turn.
+    god_turn_counter = god_turn_counter + 1
+
+    # Every 3 turns, the boss powers up permanently, creating a DPS race.
+    if god_turn_counter % 3 == 0:
+        print("\nThe Dodgeball God removes a power limiter and grows stronger!")
+        current_enemy.damage_min = current_enemy.damage_min + 10
+        current_enemy.damage_max = current_enemy.damage_max + 10
+        current_enemy.precision = current_enemy.precision + 10
+    
+    god_move = random.randint(0,100)
+
+    # Boss becomes stronger below half health but does not gain new moves.
+    if current_enemy.hp < (current_enemy.max_hp // 2) and current_enemy.phase_2 is False:
+        print("\n'You dare?! We are as different as Heaven and Earth!'")
+        current_enemy.phase_2 = True
+        current_enemy.damage_min = current_enemy.damage_min + 30
+        current_enemy.damage_max = current_enemy.damage_max + 30
+        current_enemy.precision = current_enemy.precision + 50
+
+    # If the boss charged an attack last turn, we want that to
+    # fire on this turn, dealing heavy damage.
+    # This attack will have a randomized name chosen from the list.
+    if god_charged is True:
+        chosen_move_name = god_name_randomizer()
+        slow_print("\nThe Dodgeball God unleashes their special move!")
+        slow_print(f'{chosen_move_name}')
+
+        # We store the boss' current damage range to reset later.
+        original_damage_min = current_enemy.damage_min
+        original_damage_max = current_enemy.damage_max
+
+        # We then double its current values.
+        current_enemy.damage_min = current_enemy.damage_min * 2
+        current_enemy.damage_max = current_enemy.damage_max * 2
+
+        # We roll an attack. Because its damage range on its class
+        # is boosted the damage in this calculation will also be.
+        dodge_calc(player, current_enemy)
+
+        # Original damage range restored for subsequent turns.
+        current_enemy.damage_min = original_damage_min
+        current_enemy.damage_max = original_damage_max
+
+        # Charged attack wears off.
+        god_charged = False
+
+    # If a move is not charged the boss performs a normal turn.
+    else:
+        # Result of 30 or less on the move roll means a charged attack
+        # that will execute next turn, warning the player to defend.
+        if god_move <= 30:
+            print("\nThe Dodgeball God is gathering energy!")
+            god_charged = True
+
+        # A result between 31 and 40 causes the boss to activate a shield.
+        # This shield reflects damage taken for 1 round.
+        elif god_move <= 40:
+            print("\nThe Dodgeball God creates a reflective shield! A barrier this powerful should only last for the next few moments!")
+            current_enemy.shield_active = True
+
+        # On a result of 41-100 the boss performs a normal attack.
+        else:
+            dodge_calc(player, current_enemy)
+
+# random.choice is used to return a random move from the list.
+def god_name_randomizer():
+    return random.choice(god_move_names)
+
+# God has some very intense moves, chosen randomly from this list.
+god_move_names = [
+    "Heavenly Dragon Buster, First Form!",
+    "Ten Hands of Divine Punishment!",
+    "Everlasting Flame of Creation!",
+    "Black Python of the First Night!",
+    "Stardust Genesis Burst!",
+    "Ultimate Move of the Nuclear Sect: Sunsplitter Throw!",
+    "Immortal's Whirlwind Sphere!",
+    "Ten Thousand Golden Blades!",
+    "Silver Hurricane of the Sea Dragon!",
+    "Radiant Judgment of the Celestials!",
+    "Red Crane's Final Flight!",
+    "Infinity Rains From the Sky!",
+    "Final Dream of the Scarlet Prince!"
+]
+        
+# This is the loop that actually runs the game. The outer loop checks that
+# the player is still alive and restarts the game if not.
+# It now displays what stage of the game the player is in.
+# The inner loop rolls random enemies, switching to an overlord enemy periodically.
+while True:
+    while current_enemy == 0:
+        # This if/elif branch tells the player in which quarter of the
+        # game they are.
+        if fight_god > early_game_over:
+            print("You hunt your prey at local city gyms!")
+        elif fight_god > game_midpoint:
+            print("You visit ancient dodgeball dojos to meet stronger enemies.")
+        elif fight_god > starting_late_game:
+            print("You invade the Moon in the name of dodgeball mastery.")
+        elif fight_god <= starting_late_game:
+            print("You seek the ultimate challenge in the Dodgeball Dimension!")
+
+        # This triggers a shop visit if the next_shop counter hits 0.
+        # The placement at the top of the loop ensures it always happens
+        # before either the overlord or god fights.
+        if next_shop <= 0:
+            slow_print("\nYou visit the Spice King Mapo Tofu Shop!")
+            shop()
+            next_shop = 9
+            continue
+        elif fight_god <= 0:
+            current_enemy = create_god()
+            print("-" * 40)
+            slow_print("The Dodgeball God has descended to stop your reign of terror!")
+            slow_print("'You believe you have mastered Dodgeball?! You are but a frog in a well gazing up at the sky!'")
+        
+         # If there is no periodic or final fight scheduled, the
+        # game instead rolls a random enemy depending on
+        # which stage of the game the player is in.
+        elif next_overlord > 0 and fight_god > early_game_over:
+            current_enemy = create_random_enemy()
+            slow_print(f"Prepare to face {current_enemy.type}!")
+
+        elif next_overlord > 0 and fight_god <= early_game_over:
+            current_enemy = create_greater_enemy()
+            if current_enemy.type == "Catgirl":
+                print("Nyaaa~!")
+            elif current_enemy.type == "Abomination":
+                print("A formless horror wants to play dodgeball with you!")
+            else:
+                print(f"A {current_enemy.type} approaches!")
+        elif next_overlord <= 0 and fight_god > 54:
+            current_enemy = create_overlord()
+            slow_print("A Dodgeball Overlord challenges you!")
+            next_overlord = 9
+        elif next_overlord <= 0 and fight_god <= 54:
+            current_enemy = create_greater_overlord()
+            slow_print("A Badass Freakin' Overlord has appeared!")
+            next_overlord = 9
+
+        # The player's turn is set to on at the start of each new fight.
+        # And the current enemy is locked in for a fight function use.
+        player_turn = True
+        current_enemy = fight(player, current_enemy)
+        if player.hp < 1:
+            break
+
+    # Game ends and displays the player's stats if god is defeated.
+    if current_enemy == "GOD_DEFEATED":
+        print("YOU WIN!")
+        print("Your final attributes were:")
+        full_stats_display()
+        break
+
+    # If the player is defeated the game restarts with fresh
+    # player attributes and reset global variables.
+    if player.hp < 1:
+        slow_print("You have been defeated! But the demon demands more dodgeball...")
+        print("-" * 40)
+        player = Player()
+        current_enemy = 0
+        next_shop = 9
+        next_overlord = 9
+        fight_god = 108
+        eye_of_omens_counter = 0
+        demon_counter = 0
+        player_turn = True
+                
+        god_charged = False
+        god_turn_counter = 0
+    else:
+        break
+                
+# To Do List (not necessarily in order):
+# Continue testing balance. 
+
+# Print attack rolls and enemy AC for clarity.
+# Polish the % sign issue in effect displays.
+
+# It should be possible to split the components of the fight
+# function into at least 3 separate ones.
+
+# Ideas I'm saving for the sequel (TBA):
+# 1- Items with multiple special effects.
+# 2- Enemies with different mechanics and behaviors.
+# 3- A "pupusa shop" visited 5 times throughout the game (one per stage plus once
+# at the very start of the game).
+# In this shop the player can eat pupusas to gain 2 points they can spend on
+# improving one of 3 combat masteries (Throwing, Dodging, and Mystery).
+# Each of which would be a bar with 6 skills to buy.
+# Meaning only one bar can be maxed.
