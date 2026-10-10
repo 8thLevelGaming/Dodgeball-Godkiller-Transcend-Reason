@@ -436,7 +436,7 @@ def fight(game_state, combat_state):
                     utils.slow_print(f"\nThe darkness takes you! Your enhanced state will last for {combat_state.player.demon_counter} turns!")
                     if time_control_bonus > 0:
                         print("Your mastery over time extends the effect!")
-                    combat_state.player.demon_bonus_applied = combat_state.player.demon_bonus_result(combat_state.player)
+                    combat_state.player.demon_bonus_applied = combat_state.player.demon_bonus_result()
                     combat_state.player.strength = combat_state.player.strength + combat_state.player.demon_bonus_applied
                     combat_state.player.precision = combat_state.player.precision + combat_state.player.demon_bonus_applied
                     combat_state.player.agility = combat_state.player.agility + combat_state.player.demon_bonus_applied

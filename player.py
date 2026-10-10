@@ -49,8 +49,8 @@ class Player:
     # early but stronger later on.
     # The demon mode bonus is equal to half the player's level, starting at
     # +6 to all stats except endurance, and ending up around +50.
-    def demon_bonus_result(player_character):
-        return player_character.level // 2
+    def demon_bonus_result(self):
+        return self.level // 2
 
     # This function holds stamina costs so they can be more future-proofed.
     # It now also adjusts the stamina if the player has any Graceful items.
