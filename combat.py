@@ -311,6 +311,14 @@ def dodge_calc(combat_state):
     else:
         utils.slow_print("You catch the dodgeball!")
 
+def activate_eye_of_omens(combat_state):
+    base_duration = 3
+    time_control_bonus = combat_state.player.effects.get("time control", 0)
+    total_duration = base_duration + time_control_bonus
+    combat_state.player.eye_of_omens_counter = total_duration
+    if time_control_bonus > 0:
+        print("Your mastery over time extends the effect!")
+
 class CombatState:
     """This class tracks the variables used in combat.
     It refers to the player and current enemy so those objects are updated.
@@ -407,18 +415,8 @@ def fight(game_state, combat_state):
                     combat_state.player.player_turn = False
                     
             elif player_move == "3":
-                if combat_state.player.stamina >= combat_state.player.stamina_costs('3'):
-                    utils.slow_print("\nYour magical eye grants you precognition!")
-                    base_duration = 3
-                    time_control_bonus = combat_state.player.effects.get("time control", 0)
-                    total_duration = base_duration + time_control_bonus
-                    combat_state.player.eye_of_omens_counter = total_duration
-                    if time_control_bonus > 0:
-                        print("Your mastery over time extends the effect!")
-                    combat_state.player.stamina = combat_state.player.stamina - combat_state.player.stamina_costs('3')
+                if player.stamina_checker(combat_state.player, combat_state.player.stamina_costs('3'), "Your magical eye grants you precognition!", lambda: activate_eye_of_omens(combat_state)):
                     combat_state.player.player_turn = False
-                else:
-                    print("Not enough stamina!")
                     
             elif player_move == "4":
                 if player.stamina_checker(combat_state.player, combat_state.player.stamina_costs('4'), "You throw a ball imbued with the power and malevolence of the sun!", lambda: hit_calc("Helios", combat_state)):

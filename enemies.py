@@ -275,13 +275,13 @@ def create_random_enemy():
     # We return the result of the roll.
     return new_enemy
 
-def create_greater_enemy(fight_god, game_midpoint, starting_late_game):
+def create_greater_enemy(game_state):
     """Similar function to before, but used to make midgame and lategame enemies.
     The strongest enemies only start spawning when the game has progressed past
     the 50% and 75% marks. Earlier in the game it is impossible to roll dragons or kaiju."""
-    if fight_god > game_midpoint:
+    if game_state.fight_god > game_state.game_midpoint:
         enemy_roll = random.randint(0, 100)
-    elif fight_god > starting_late_game:
+    elif game_state.fight_god > game_state.starting_late_game:
         enemy_roll = random.randint(25, 125)
     else:
         enemy_roll = random.randint(50, 150)

@@ -117,8 +117,6 @@ attack_multipliers = {
     "Helios": 2.5
 }
 
-
-
 # This other function checks to see if the player actually has enough
 # stamina to perform an action and it performs the action and deducts
 # the cost. For this function we are going to be using another
