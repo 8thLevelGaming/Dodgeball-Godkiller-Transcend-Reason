@@ -15,7 +15,6 @@ import utils
 
 start_game = 0
 
-
 class GameState:
     """This class keeps track of various progression counters and the current difficulty.
     Current_enemy makes it so there is no initial enemy so the game rolls a random one.
@@ -222,10 +221,9 @@ while True:
                 player_character.money = 120
                 player_character.hp = player_character.max_hp()
                 player_character.stamina = player_character.max_stamina()
-
-        else:
-            break
-                
+    
+    if game_state.result == "GOD_DEFEATED":
+        break
 # To Do List (not necessarily in order):
 # Continue testing balance. 
 

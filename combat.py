@@ -339,6 +339,7 @@ def fight(game_state, combat_state):
     while True:
         enemies.enemy_stats_display(combat_state.enemy)
         player.stats_display(combat_state.player)
+        combat_state.player.player_turn = True
         combat_state.player.invulnerable = False
 
         # The loop is set to immediately break if the player hits 0 HP.
@@ -464,7 +465,7 @@ def fight(game_state, combat_state):
             elif player_move == "8":
                 if combat_state.player.spellcard_inventory > 0:
                     combat_state.player.spellcard_inventory = combat_state.player.spellcard_inventory - 1
-                    combat_state.player.hp = combat_state.player.hp - (combat_state.player.level * 2)
+                    combat_state.enemy.hp = combat_state.enemy.hp - (combat_state.player.level * 2)
                     combat_state.player.invulnerable = True
                     utils.slow_print("You become invulnerable for a brief time and unleash a powerful attack!")
                     combat_state.player.player_turn = False
@@ -474,17 +475,19 @@ def fight(game_state, combat_state):
             elif player_move == "9":
                 player.full_stats_display(combat_state.player)
 
-            # The following code uses min() to regenerate the player's HP and stamina
-            # up to but not exceeding their maximum values. This prevents overheal.
-            # We want this regen to happen after the player's turn but before the enemy
-            # attacks as a mercy to the player.
-            hp_regen_bonus = 0
-            stamina_regen_bonus = 0
-            if combat_state.player.demon_counter > 0:
-                hp_regen_bonus = 5
-                stamina_regen_bonus = 10
-            combat_state.player.hp = min(combat_state.player.hp + combat_state.player.hp_regen() + hp_regen_bonus, combat_state.player.max_hp())
-            combat_state.player.stamina = min(combat_state.player.stamina + combat_state.player.stamina_regen() + stamina_regen_bonus, combat_state.player.max_stamina())
+        # The following code uses min() to regenerate the player's HP and stamina
+        # up to but not exceeding their maximum values. This prevents overheal.
+        # We want this regen to happen after the player's turn but before the enemy
+        # attacks as a mercy to the player.
+        # We moved the code outside the player's turn loop so free actions would
+        # not allow the player to heal multiple times in a single turn.
+        hp_regen_bonus = 0
+        stamina_regen_bonus = 0
+        if combat_state.player.demon_counter > 0:
+            hp_regen_bonus = 5
+            stamina_regen_bonus = 10
+        combat_state.player.hp = min(combat_state.player.hp + combat_state.player.hp_regen() + hp_regen_bonus, combat_state.player.max_hp())
+        combat_state.player.stamina = min(combat_state.player.stamina + combat_state.player.stamina_regen() + stamina_regen_bonus, combat_state.player.max_stamina())
 
         # Once the player's turn ends, the enemy performs a simple attack and
         # The player can move again. If the enemy is stunned
