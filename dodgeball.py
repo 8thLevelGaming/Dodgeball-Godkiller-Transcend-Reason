@@ -103,12 +103,11 @@ input("Press Enter key to begin your rampage!")
 # We do this after each turn too.
 print("-" * 40)
 
-# This runs the Player class, instantiating its values into a variable 
-# called player. This variable gets refreshed if the player is defeated
-# and starts over (see bottom of program), wiping progress.
-# Because the game will always refer to this variable rather than the
-# class itself we use player in all lowercase to search for items in the
-# attached player class.
+# This creates the Player instance, which is passed into combat and shop
+# functions. Player data (money, hp, strength, etc.) lives on this instance,
+# not on the player module. So write player_character.money, not player.money.
+# (The module-level `player.attack_multipliers` and helper functions are
+# accessed as `player.something` — the module and the instance share the name.)
 player_character = player.Player()
 
 # Immediately after we create the player, we check if easy mode
@@ -199,33 +198,33 @@ while True:
             difficulty_selection = 0
             game_state = GameState()
 
-        while difficulty_selection not in ["1", "2"]:
-            print("Will you try again?")
-            print("1) Try again on normal difficulty.")
-            print("2) Try again on easy difficulty.")
-            difficulty_selection = input("Choose: ")
-    
-            if difficulty_selection == "2":
-                game_state.easy_mode = True
-            elif difficulty_selection == "1":
-                game_state.easy_mode = False
-            else:
-                print("Choose 1 or 2.")
-                
-        player_character = player.Player()
+            while difficulty_selection not in ["1", "2"]:
+                print("Will you try again?")
+                print("1) Try again on normal difficulty.")
+                print("2) Try again on easy difficulty.")
+                difficulty_selection = input("Choose: ")
+        
+                if difficulty_selection == "2":
+                    game_state.easy_mode = True
+                elif difficulty_selection == "1":
+                    game_state.easy_mode = False
+                else:
+                    print("Choose 1 or 2.")
+                    
+            player_character = player.Player()
 
-        if game_state.easy_mode is True:
-            player_character.level = 15
-            player_character.strength = 12
-            player_character.precision = 12
-            player_character.agility = 11
-            player_character.endurance = 12
-            player_character.money = 120
-            player_character.hp = player_character.max_hp()
-            player_character.stamina = player_character.max_stamina()
+            if game_state.easy_mode is True:
+                player_character.level = 15
+                player_character.strength = 12
+                player_character.precision = 12
+                player_character.agility = 11
+                player_character.endurance = 12
+                player_character.money = 120
+                player_character.hp = player_character.max_hp()
+                player_character.stamina = player_character.max_stamina()
 
-    else:
-        break
+        else:
+            break
                 
 # To Do List (not necessarily in order):
 # Continue testing balance. 

@@ -445,7 +445,7 @@ def fight(game_state, combat_state):
                     
             elif player_move == "6":
                 combat_state.player.stamina = combat_state.player.stamina + (combat_state.player.stamina_regen() * 3)
-                combat_state.player_turn = False
+                combat_state.player.player_turn = False
                 
             elif player_move == "7":
                 if combat_state.player.sardine_inventory > 0:
@@ -454,7 +454,7 @@ def fight(game_state, combat_state):
                     combat_state.player.stamina = combat_state.player.max_stamina()
                     utils.slow_print("You eat the sardines. They taste like victory.")
                     if combat_state.player.effects.get("hungry beast", 0) == 0:
-                        combat_state.player_turn = False
+                        combat_state.player.player_turn = False
                     elif combat_state.player.effects.get("hungry beast", 0) > 0:
                         print("You devour the sardines quickly!")
                 else:
@@ -466,7 +466,7 @@ def fight(game_state, combat_state):
                     combat_state.player.hp = combat_state.player.hp - (combat_state.player.level * 2)
                     combat_state.player.invulnerable = True
                     utils.slow_print("You become invulnerable for a brief time and unleash a powerful attack!")
-                    combat_state.player_turn = False
+                    combat_state.player.player_turn = False
                 else:
                     print("You are out of spellcards!")
                     

@@ -31,7 +31,7 @@ def gym(player_character):
         if player_character.exp >= 100:
             player_character.level = player_character.level + 1
             player_character.exp = player_character.exp - 100
-            player_character.full_stats_display(player_character)
+            player.full_stats_display(player_character)
             player.level_up(player_character)
     else:
         print("You can't afford to go to the gym...")
@@ -59,7 +59,7 @@ def visit_shop(player_character):
     This function uses getattr and setattr. These help with saving object attributes into strings.
     For example, setattr(player, "strength", 15) is the same as player.strength = 15. 
     There are cases where this is preferable, such as when an attribute is decided at runtime."""
-    available_items = item_roll()
+    available_items = item_roll(player_character)
     # We make it so every shop visit the player enters as not having
     # already bought an item, enabling them to buy a new one.
     player_already_bought = False
@@ -77,8 +77,8 @@ def visit_shop(player_character):
     # This is the loop where the player can actually interact with the shop.
     while True:
         utils.slow_print("\nA strange old man offers you mapo tofu and a relic. You can buy only one of the three.")
-        player.stats_display(player_character)
-        utils.slow_print(f"You currently have ${player.money}")
+        player_character.stats_display(player_character)
+        utils.slow_print(f"You currently have ${player_character.money}")
         print("-" * 40)
         gym_price_display = gym_price()
         
@@ -87,7 +87,7 @@ def visit_shop(player_character):
         "2": f"Buy {available_items[1]} ({item2_rarity}) for ${item2_price}\n ---> {items.item_effects_display(available_items[1])}",
         "3": f"Buy {available_items[2]} ({item3_rarity}) for ${item3_price}\n ---> {items.item_effects_display(available_items[2])}",
         "4": "Eat some extra-spicy mapo tofu for $20.",
-        "5": f"Buy a big can of sardines to eat later for $20. You currently have {player.sardine_inventory}.",
+        "5": f"Buy a big can of sardines to eat later for $20. You currently have {player_character.sardine_inventory}.",
         "6": f"Hit the gym and train. It will cost ${gym_price_display}.",
         "7": "View your stats.",
         "8": "Leave the shop."
@@ -118,9 +118,9 @@ def visit_shop(player_character):
                     
             elif player_buy == "2":
                 item_name = available_items[1]
-                if player.money >= item2_price:
+                if player_character.money >= item2_price:
                     if player_already_bought is False:
-                        player.money = player.money - item2_price
+                        player_character.money = player_character.money - item2_price
                         items.apply_item_effects(item_name, player_character)
                         print(f"You bought {item_name}! ({items.item_effects_display(item_name)})")
                         player_already_bought = True
