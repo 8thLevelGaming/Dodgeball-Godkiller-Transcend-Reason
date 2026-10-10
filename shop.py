@@ -80,7 +80,7 @@ def visit_shop(player_character):
         player.stats_display(player_character)
         utils.slow_print(f"You currently have ${player_character.money}")
         print("-" * 40)
-        gym_price_display = gym_price()
+        gym_price_display = gym_price(player_character)
         
         options = {
         "1": f"Buy {available_items[0]} ({item1_rarity}) for ${item1_price}\n ---> {items.item_effects_display(available_items[0])}",
