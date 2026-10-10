@@ -440,6 +440,7 @@ def fight(game_state, combat_state):
                     combat_state.player.strength = combat_state.player.strength + combat_state.player.demon_bonus_applied
                     combat_state.player.precision = combat_state.player.precision + combat_state.player.demon_bonus_applied
                     combat_state.player.agility = combat_state.player.agility + combat_state.player.demon_bonus_applied
+                    player.stats_display(combat_state.player)
                 else:
                     print("You are already transformed!")
                     

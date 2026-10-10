@@ -77,7 +77,7 @@ def visit_shop(player_character):
     # This is the loop where the player can actually interact with the shop.
     while True:
         utils.slow_print("\nA strange old man offers you mapo tofu and a relic. You can buy only one of the three.")
-        player_character.stats_display(player_character)
+        player.stats_display(player_character)
         utils.slow_print(f"You currently have ${player_character.money}")
         print("-" * 40)
         gym_price_display = gym_price()
