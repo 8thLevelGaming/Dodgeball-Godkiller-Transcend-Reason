@@ -229,25 +229,29 @@ def main():
         
         if game_state.result == "GOD_DEFEATED":
             break
-    # To Do List (not necessarily in order):
-    # Continue testing balance. 
-
-    # Print attack rolls and enemy AC for clarity.
-    # Polish the % sign issue in effect displays.
-
-    # It should be possible to split the components of the fight
-    # function into at least 3 separate ones.
-
-    # Ideas I'm saving for the sequel (TBA):
-    # 1- Items with multiple special effects.
-    # 2- Enemies with different mechanics and behaviors.
-    # 3- A "pupusa shop" visited 5 times throughout the game (one per stage plus once
-    # at the very start of the game).
-    # In this shop the player can eat pupusas to gain 2 points they can spend on
-    # improving one of 3 combat masteries (Throwing, Dodging, and Mystery).
-    # Each of which would be a bar with 6 skills to buy.
-    # Meaning only one bar can be maxed.
 
 # ! This is the main entry point of the program. It calls the main() function to start the game.
 if __name__ == "__main__":
     main()
+
+# todo To Do List (not necessarily in order):
+# todo Continue testing balance. 
+
+# todo It should be possible to split the components of the fight
+# todo function into at least 3 separate ones.
+
+# todo Ideas I'm saving for the sequel (TBA):
+# todo 1- Items with multiple special effects.
+# todo 2- Enemies with different mechanics and behaviors.
+# todo 3- A "pupusa shop" visited 5 times throughout the game (one per stage plus once
+# todo at the very start of the game).
+# todo In this shop the player can eat pupusas to gain 2 points they can spend on
+# todo improving one of 3 combat masteries (Throwing, Dodging, and Mystery).
+# todo Each of which would be a bar with 6 skills to buy.
+# todo Meaning only one bar can be maxed.
+
+# todo the ability to fight multiple enemies at once, with a turn order based on agility.
+# todo the ability to choose a "starting class" with a unique starting skill.
+# todo instead of increasing a single stat by 2 on level-up, the player gets a small pool of
+# todo points to spend on any stat they want on level-up, but XP values are adjusted to
+# todo make leveling up more infrequent, but more rewarding.
